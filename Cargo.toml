@@ -4,3 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+graph = { path = "./graph" }
+parser = { path = "./parser" }
+
+[workspace]
+members = [ "binary", "graph", "parser" ]

@@ -8,4 +8,4 @@ graph = { path = "./graph" }
 parser = { path = "./parser" }
 
 [workspace]
-members = [ "binary", "graph", "parser" ]
+members = [ "binary", "graph", "parser" , "token"]

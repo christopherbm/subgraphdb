@@ -5,6 +5,8 @@ use super::edge::{ Edge, EdgeType };
 use crate::graph_utils::graph_utils::{ cons_node, cons_edge };
 
 static NODE_MISSING_ERR: &'static str = "::node_missing";
+static NODE_EXISTS_ERR: &'static str = "::node_exists";
+static EDGE_EXISTS_ERR: &'static str = "::edge_exists";
 
 #[derive(Debug)]
 pub struct Graph 
@@ -84,6 +86,48 @@ impl Graph
       EdgeType::Undirected,
       HashSet::new(),
       HashMap::new())
+  }
+
+  pub fn add_node ( &mut self, node: Node ) -> Result<bool, &'static str>
+  { 
+    if self.nodes.contains_key( &node.id ) { return Err( NODE_EXISTS_ERR ) }
+    self.nodes.insert( node.id.clone(), node );
+    Ok( true )
+  }
+
+  pub fn add_edge ( &mut self, edge: Edge ) -> Result<bool, &'static str>
+  {
+    if self.edges.contains_key( &edge.id ) { return Err( EDGE_EXISTS_ERR ) }
+    if !self.nodes.contains_key( &edge.left ) { return Err( NODE_MISSING_ERR ) }
+    if !self.nodes.contains_key( &edge.right ) { return Err( NODE_MISSING_ERR ) }
+    self.edges.insert( edge.id.clone(), edge );
+    Ok( true )
+  }
+
+  pub fn get_nodes ( &self ) -> Vec<&Node> 
+  {
+    let mut ret: Vec<&Node> = self.nodes.values().into_iter().collect::<Vec<_>>();
+    ret.sort_by(| a, b | a.inner_order.cmp( &b.inner_order ));
+    ret
+  }
+
+  pub fn get_edges ( &self ) -> Vec<&Edge> 
+  {
+    let mut ret: Vec<&Edge> = self.edges.values().into_iter().collect::<Vec<_>>();
+    ret.sort_by(| a, b | a.inner_order.cmp( &b.inner_order ));
+    ret    
+  }
+
+  pub fn find_node_by_id ( &self, id: &str ) -> Option<&Node>
+  {
+    if self.nodes.contains_key( id ) { return self.nodes.get( id ); }
+    None
+  }
+
+  pub fn find_edge_by_id ( &self, id: &str ) -> Option<&Edge>
+  {
+    if self.edges.contains_key( id ) { return self.edges.get( id ); }
+    None
   }
 
   fn inner_node_order ( &mut self ) -> u64 
@@ -196,5 +240,119 @@ mod tests
     assert_eq!( edge.right, "" );
     assert_eq!( edge.labels.len(), 0 );
     assert_eq!( edge.metadata.len(), 0 );
+  }
+
+  #[test]
+  fn test_add_node () 
+  {
+    let mut gph: Graph = cons_graph();
+    let node: Node = gph.cons_empty_node();
+    let id: String = node.id.clone();
+    let add_res = gph.add_node( node );
+    assert_eq!( add_res.is_ok(), true );
+    assert_eq!( add_res.unwrap(), true );
+
+    let mut node1: Node = gph.cons_empty_node();
+    node1.id = id;
+    let add_res1 = gph.add_node( node1 );
+    assert_eq!( add_res1.is_ok(), false );
+  }
+
+  #[test]
+  fn test_add_edge () 
+  {
+    let mut gph: Graph = cons_graph();
+    let node: Node = gph.cons_empty_node();
+    let nid: String = node.id.clone();
+    let node1: Node = gph.cons_empty_node();
+    let nid1: String = node1.id.clone();
+    let _ = gph.add_node( node );
+    let _ = gph.add_node( node1 );
+
+    let mut edge: Edge = gph.cons_empty_edge();
+    edge.left = nid.clone();
+    edge.right = nid1.clone();
+    let id: String = edge.id.clone();
+    let add_res = gph.add_edge( edge );
+    assert_eq!( add_res.is_ok(), true );
+    assert_eq!( add_res.unwrap(), true );
+
+    let mut edge1: Edge = gph.cons_empty_edge();
+    edge1.id = id;
+    edge1.left = nid.clone();
+    edge1.right = nid1.clone();
+    let add_res1 = gph.add_edge( edge1 );
+    assert_eq!( add_res1.is_ok(), false );
+  }
+
+  #[test]
+  fn test_get_nodes () 
+  {
+    let mut gph: Graph = cons_graph();
+    let node: Node = gph.cons_empty_node();
+    let node1: Node = gph.cons_empty_node();
+    let _ = gph.add_node( node );
+    let _ = gph.add_node( node1 );
+
+    assert_eq!( gph.get_nodes().len(), 2 );
+  }
+
+  #[test]
+  fn test_get_edges () 
+  {
+    let mut gph: Graph = cons_graph();
+    let node: Node = gph.cons_empty_node();
+    let nid: String = node.id.clone();
+    let node1: Node = gph.cons_empty_node();
+    let nid1: String = node1.id.clone();
+    let _ = gph.add_node( node );
+    let _ = gph.add_node( node1 );
+
+    let mut edge: Edge = gph.cons_empty_edge();
+    edge.left = nid.clone();
+    edge.right = nid1.clone();
+    let _ = gph.add_edge( edge );
+
+    assert_eq!( gph.get_edges().len(), 1 );
+  }
+
+  #[test]
+  fn test_find_node_by_id () 
+  {
+    let mut gph: Graph = cons_graph();
+    let node1: Node = gph.cons_empty_node();
+    let node_id: String = node1.id.clone();
+
+    let _ = gph.add_node( node1 );
+
+    let find_res = gph.find_node_by_id( &node_id );
+    assert_eq!( find_res.is_some(), true );
+
+    let find_res1 = gph.find_node_by_id( "fail" );
+    assert_eq!( find_res1.is_some(), false );
+  }
+
+  #[test]
+  fn test_find_edge_by_id () 
+  {
+    let mut gph: Graph = cons_graph();
+    let node1: Node = gph.cons_empty_node();
+    let node2: Node = gph.cons_empty_node();
+
+    let id1: String = node1.id.clone();
+    let id2: String = node2.id.clone();
+
+    let _ = gph.add_node( node1 ); 
+    let _ = gph.add_node( node2 );
+
+    let edge1: Edge = gph.cons_edge( String::from( "edge1" ), 0, 0, id1, id2, EdgeType::Undirected );
+    let edge_id: String = edge1.id.clone();
+    let res = gph.add_edge( edge1 );
+
+    let find_res = gph.find_edge_by_id( &edge_id );
+    assert_eq!( find_res.is_some(), true );
+
+    let find_res1 = gph.find_node_by_id( "fail" );
+    assert_eq!( find_res1.is_some(), false );
   }
 }

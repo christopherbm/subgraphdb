@@ -5,148 +5,148 @@ use graph::model::graph::{ Graph, cons_graph };
 fn test_graph_1 () -> Graph
 {
   let mut gph: Graph = cons_graph();
-  let nodea: Node = gph.cons_node( String::from( "A" ), 0, 0 );
-  let nodeb: Node = gph.cons_node( String::from( "B" ), 0, 0 );
-  let nodec: Node = gph.cons_node( String::from( "C" ), 0, 0 );
-  let noded: Node = gph.cons_node( String::from( "D" ), 0, 0 );
-  let nodee: Node = gph.cons_node( String::from( "E" ), 0, 0 );
-  let nodef: Node = gph.cons_node( String::from( "F" ), 0, 0 );
-  let nodeg: Node = gph.cons_node( String::from( "G" ), 0, 0 );
-  let nodeh: Node = gph.cons_node( String::from( "H" ), 0, 0 );
-  let nodei: Node = gph.cons_node( String::from( "I" ), 0, 0 );
-  let nodej: Node = gph.cons_node( String::from( "J" ), 0, 0 );
-  let nodek: Node = gph.cons_node( String::from( "K" ), 0, 0 );
-  let nodel: Node = gph.cons_node( String::from( "L" ), 0, 0 );
+  let nodea: Node = gph.cons_node( String::from( "A" ), 0.0 );
+  let nodeb: Node = gph.cons_node( String::from( "B" ), 0.0 );
+  let nodec: Node = gph.cons_node( String::from( "C" ), 0.0 );
+  let noded: Node = gph.cons_node( String::from( "D" ), 0.0 );
+  let nodee: Node = gph.cons_node( String::from( "E" ), 0.0 );
+  let nodef: Node = gph.cons_node( String::from( "F" ), 0.0 );
+  let nodeg: Node = gph.cons_node( String::from( "G" ), 0.0 );
+  let nodeh: Node = gph.cons_node( String::from( "H" ), 0.0 );
+  let nodei: Node = gph.cons_node( String::from( "I" ), 0.0 );
+  let nodej: Node = gph.cons_node( String::from( "J" ), 0.0 );
+  let nodek: Node = gph.cons_node( String::from( "K" ), 0.0 );
+  let nodel: Node = gph.cons_node( String::from( "L" ), 0.0 );
 
   let edge0: Edge = gph.cons_edge( 
     String::from( "AB" ), 
-    0, 3, 
+    3.0, 
     nodea.id.clone(), 
     nodeb.id.clone(),
     EdgeType::Undirected );
   
   let edge1: Edge = gph.cons_edge( 
     String::from( "AC" ), 
-    0, 2, 
+    2.0, 
     nodea.id.clone(), 
     nodec.id.clone(),
     EdgeType::Undirected );
   
   let edge2: Edge = gph.cons_edge( 
     String::from( "AE" ), 
-    0, 9, 
+    9.0, 
     nodea.id.clone(), 
     nodee.id.clone(),
     EdgeType::Undirected );
   
   let edge3: Edge = gph.cons_edge( 
     String::from( "BD" ), 
-    0, 2, 
+    2.0, 
     nodeb.id.clone(), 
     noded.id.clone(),
     EdgeType::Undirected );
   
   let edge4: Edge = gph.cons_edge( 
     String::from( "BE" ), 
-    0, 4, 
+    4.0, 
     nodeb.id.clone(), 
     nodee.id.clone(),
     EdgeType::Undirected );
   
   let edge5: Edge = gph.cons_edge( 
     String::from( "CE" ), 
-    0, 6, 
+    6.0, 
     nodec.id.clone(), 
     nodee.id.clone(),
     EdgeType::Undirected );
 
   let edge6: Edge = gph.cons_edge( 
     String::from( "CF" ), 
-    0, 9, 
+    9.0, 
     nodec.id.clone(), 
     nodef.id.clone(),
     EdgeType::Undirected );
 
   let edge7: Edge = gph.cons_edge( 
     String::from( "DG" ), 
-    0, 3, 
+    3.0, 
     noded.id.clone(), 
     nodeg.id.clone(),
     EdgeType::Undirected );
 
   let edge8: Edge = gph.cons_edge( 
     String::from( "EG" ), 
-    0, 1, 
+    1.0, 
     nodee.id.clone(), 
     nodeg.id.clone(),
     EdgeType::Undirected );
   
   let edge9: Edge = gph.cons_edge( 
     String::from( "EH" ), 
-    0, 2, 
+    2.0, 
     nodee.id.clone(), 
     nodeh.id.clone(),
     EdgeType::Undirected );
 
   let edge10: Edge = gph.cons_edge( 
     String::from( "FH" ), 
-    0, 1, 
+    1.0, 
     nodef.id.clone(), 
     nodeh.id.clone(),
     EdgeType::Undirected );
 
   let edge11: Edge = gph.cons_edge( 
     String::from( "FI" ), 
-    0, 2, 
+    2.0, 
     nodef.id.clone(), 
     nodei.id.clone(),
     EdgeType::Undirected );
 
   let edge12: Edge = gph.cons_edge( 
     String::from( "GJ" ), 
-    0, 5, 
+    5.0, 
     nodeg.id.clone(), 
     nodej.id.clone(),
     EdgeType::Undirected );
 
   let edge13: Edge = gph.cons_edge( 
     String::from( "HJ" ), 
-    0, 5, 
+    5.0, 
     nodeh.id.clone(), 
     nodej.id.clone(),
     EdgeType::Undirected );
   
   let edge14: Edge = gph.cons_edge( 
     String::from( "HL" ), 
-    0, 9, 
+    9.0, 
     nodeh.id.clone(), 
     nodel.id.clone(),
     EdgeType::Undirected );
 
   let edge15: Edge = gph.cons_edge( 
     String::from( "HK" ), 
-    0, 6, 
+    6.0, 
     nodeh.id.clone(), 
     nodek.id.clone(),
     EdgeType::Undirected );
 
   let edge16: Edge = gph.cons_edge( 
     String::from( "IK" ), 
-    0, 2, 
+    2.0, 
     nodei.id.clone(), 
     nodek.id.clone(),
     EdgeType::Undirected );
 
   let edge17: Edge = gph.cons_edge( 
     String::from( "JL" ), 
-    0, 5, 
+    5.0, 
     nodej.id.clone(), 
     nodel.id.clone(),
     EdgeType::Undirected );
 
   let edge18: Edge = gph.cons_edge( 
     String::from( "KL" ), 
-    0, 3, 
+    3.0, 
     nodek.id.clone(), 
     nodel.id.clone(),
     EdgeType::Undirected );
@@ -199,9 +199,4 @@ fn test_test_graph_1 ()
  
   assert_eq!( gph.get_nodes().len(), 12 );
   assert_eq!( gph.get_edges().len(), 19 );
-
-  assert_eq!( gph.get_nodes()[ 11 ].inner_order, 11 );
-  assert_eq!( gph.get_edges()[ 18 ].inner_order, 18 );
-
-  //println!( "{:?}", nodes );
 }

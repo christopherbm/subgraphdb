@@ -8,10 +8,8 @@ pub enum EdgeType { Undirected, DirectedLeft, DirectedRight, Bidirectional }
 pub struct Edge 
 { 
   pub id: String,
-  pub order: u64,
-  pub inner_order: u64,
   pub delta: u64,
-  pub weight: i64,
+  pub weight: f64,
   pub name: String,
   pub left: String, 
   pub right: String, 

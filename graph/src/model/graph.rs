@@ -12,8 +12,6 @@ static EDGE_EXISTS_ERR: &'static str = "::edge_exists";
 pub struct Graph 
 { 
   pub id: String,
-  pub inner_node_order: u64,
-  pub inner_edge_order: u64,
   pub nodes: HashMap<String, Node>, 
   pub edges: HashMap<String, Edge> 
 }
@@ -29,13 +27,11 @@ impl Graph
   // Graph Size is number of Edges
   pub fn graph_size ( &self ) -> usize { self.edge_count() }
 
-  pub fn cons_node ( &mut self, name: String, order: u64, weight: i64 ) -> Node 
+  pub fn cons_node ( &mut self, name: String, weight: f64 ) -> Node 
   {
     cons_node(
       Uuid::new_v4().to_string(),
       name,
-      order,
-      self.inner_node_order(),
       0,
       weight,
       HashSet::new(),
@@ -48,21 +44,17 @@ impl Graph
       Uuid::new_v4().to_string(), 
       String::from( "" ), 
       0, 
-      self.inner_node_order(), 
-      0, 
-      0,
+      0.0,
       HashSet::new(), 
       HashMap::new())
   }
 
-  pub fn cons_edge ( &mut self, name: String, order: u64, weight: i64, left: String, right: String, etype: EdgeType ) 
+  pub fn cons_edge ( &mut self, name: String, weight: f64, left: String, right: String, etype: EdgeType ) 
     -> Edge
   {
     cons_edge(
       Uuid::new_v4().to_string(),
       name,
-      order,
-      self.inner_edge_order(),
       0,
       weight,
       left,
@@ -78,9 +70,7 @@ impl Graph
       Uuid::new_v4().to_string(),
       String::from( "" ),
       0,
-      self.inner_edge_order(),
-      0,
-      0,
+      0.0,
       String::from( "" ),
       String::from( "" ),
       EdgeType::Undirected,
@@ -106,16 +96,12 @@ impl Graph
 
   pub fn get_nodes ( &self ) -> Vec<&Node> 
   {
-    let mut ret: Vec<&Node> = self.nodes.values().into_iter().collect::<Vec<_>>();
-    ret.sort_by(| a, b | a.inner_order.cmp( &b.inner_order ));
-    ret
+    self.nodes.values().into_iter().collect::<Vec<_>>()
   }
 
   pub fn get_edges ( &self ) -> Vec<&Edge> 
   {
-    let mut ret: Vec<&Edge> = self.edges.values().into_iter().collect::<Vec<_>>();
-    ret.sort_by(| a, b | a.inner_order.cmp( &b.inner_order ));
-    ret    
+    self.edges.values().into_iter().collect::<Vec<_>>()
   }
 
   pub fn find_node_by_id ( &self, id: &str ) -> Option<&Node>
@@ -129,28 +115,12 @@ impl Graph
     if self.edges.contains_key( id ) { return self.edges.get( id ); }
     None
   }
-
-  fn inner_node_order ( &mut self ) -> u64 
-  {
-    let ret = self.inner_node_order.clone();
-    self.inner_node_order += 1;
-    ret
-  }
-
-  fn inner_edge_order ( &mut self ) -> u64 
-  {
-    let ret = self.inner_edge_order.clone();
-    self.inner_edge_order += 1;
-    ret
-  }
 }
 
 pub fn cons_graph () -> Graph
 {
   Graph {
     id: Uuid::new_v4().to_string(),
-    inner_node_order: 0,
-    inner_edge_order: 0,
     nodes: HashMap::new(),
     edges: HashMap::new()
   }
@@ -168,8 +138,6 @@ mod tests
   {
     let gph: Graph = cons_graph();
     assert_eq!( gph.id.len() > 0, true );
-    assert_eq!( gph.inner_node_order, 0 );
-    assert_eq!( gph.inner_edge_order, 0 );
     assert_eq!( gph.nodes.len(), 0 );
     assert_eq!( gph.edges.len(), 0 );
   }
@@ -178,13 +146,11 @@ mod tests
   fn test_cons_node () 
   {
     let mut gph: Graph = cons_graph();
-    let node: Node = gph.cons_node( String::from( "node1" ), 5, 6 );
+    let node: Node = gph.cons_node( String::from( "node1" ), 6.0 );
     assert_eq!( node.id.len() > 0, true );
     assert_eq!( node.name, "node1" );
-    assert_eq!( node.order, 5 );
-    assert_eq!( node.inner_order, 0 );
     assert_eq!( node.delta, 0 );
-    assert_eq!( node.weight, 6 );
+    assert_eq!( node.weight, 6.0 );
     assert_eq!( node.labels.len(), 0 );
     assert_eq!( node.metadata.len(), 0 );
   }
@@ -196,29 +162,22 @@ mod tests
     let node: Node = gph.cons_empty_node();
     assert_eq!( node.id.len() > 0, true );
     assert_eq!( node.name, "" );
-    assert_eq!( node.order, 0 );
-    assert_eq!( node.inner_order, 0 );
     assert_eq!( node.delta, 0 );
-    assert_eq!( node.weight, 0 );
+    assert_eq!( node.weight, 0.0 );
     assert_eq!( node.labels.len(), 0 );
     assert_eq!( node.metadata.len(), 0 );
-
-    let node1: Node = gph.cons_empty_node();
-    assert_eq!( node1.inner_order, 1 );
   }
 
   #[test]
   fn test_cons_edge () 
   {
     let mut gph: Graph = cons_graph();
-    let edge: Edge = gph.cons_edge( String::from( "edge" ), 5, 6, String::from( "left" ), String::from( "right" ),
+    let edge: Edge = gph.cons_edge( String::from( "edge" ), 6.0, String::from( "left" ), String::from( "right" ),
       EdgeType::Undirected );
     assert_eq!( edge.id.len() > 0, true );
     assert_eq!( edge.name, "edge" );
-    assert_eq!( edge.order, 5 );
-    assert_eq!( edge.inner_order, 0 );
     assert_eq!( edge.delta, 0 );
-    assert_eq!( edge.weight, 6 );
+    assert_eq!( edge.weight, 6.0 );
     assert_eq!( edge.left, "left" );
     assert_eq!( edge.right, "right" );
     assert_eq!( edge.labels.len(), 0 );
@@ -232,10 +191,8 @@ mod tests
     let edge: Edge = gph.cons_empty_edge();
     assert_eq!( edge.id.len() > 0, true );
     assert_eq!( edge.name, "" );
-    assert_eq!( edge.order, 0 );
-    assert_eq!( edge.inner_order, 0 );
     assert_eq!( edge.delta, 0 );
-    assert_eq!( edge.weight, 0 );
+    assert_eq!( edge.weight, 0.0 );
     assert_eq!( edge.left, "" );
     assert_eq!( edge.right, "" );
     assert_eq!( edge.labels.len(), 0 );
@@ -345,7 +302,7 @@ mod tests
     let _ = gph.add_node( node1 ); 
     let _ = gph.add_node( node2 );
 
-    let edge1: Edge = gph.cons_edge( String::from( "edge1" ), 0, 0, id1, id2, EdgeType::Undirected );
+    let edge1: Edge = gph.cons_edge( String::from( "edge1" ), 0.0, id1, id2, EdgeType::Undirected );
     let edge_id: String = edge1.id.clone();
     let res = gph.add_edge( edge1 );
 

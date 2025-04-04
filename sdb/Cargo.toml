@@ -1,0 +1,8 @@
+[package]
+name = "sdb"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sdb_config = { path = "../sdb_config" }
+fdm = { path = "../fdm" }

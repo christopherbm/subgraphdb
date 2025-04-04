@@ -1,0 +1,15 @@
+[package]
+name = "subgraphdb"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+common = { path = "./common" }
+sdb = { path = "./sdb" }
+sdb_config = { path = "./sdb_config" }
+cli = { path = "./cli" }
+fdm = { path = "./fdm" }
+datagram = { path = "./datagram" }
+
+[workspace]
+members = [ "common", "sdb", "sdb_config", "fdm", "cli", "datagram" , "graph"]

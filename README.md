@@ -1,2 +1,2 @@
 # subgraphdb
-SubGraphDB. A flat-file graph database built with Rust
+SubGraphDB. A flat-file graph database built with Rust.

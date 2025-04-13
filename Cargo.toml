@@ -12,4 +12,4 @@ fdm = { path = "./fdm" }
 datagram = { path = "./datagram" }
 
 [workspace]
-members = [ "common", "sdb", "sdb_config", "fdm", "cli", "datagram" , "graph"]
+members = [ "common", "sdb", "sdb_config", "fdm", "cli", "datagram" , "graph", "api", "utils", "cmd", "planner", "executor"]

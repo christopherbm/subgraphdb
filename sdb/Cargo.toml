@@ -5,4 +5,3 @@ edition = "2021"
 
 [dependencies]
 sdb_config = { path = "../sdb_config" }
-fdm = { path = "../fdm" }

@@ -1,4 +1,7 @@
 use std::string::{ FromUtf8Error };
+use std::path::PathBuf;
+use std::fs::{ File, exists };
+use std::io::Error;
 
 /// Convert Byte Array into String
 pub fn str_from_bytes ( bytes: &[u8] ) -> Result<String, FromUtf8Error> 
@@ -51,6 +54,31 @@ pub fn parse_padded_str ( padded_str: &str ) -> &str
   let split: Vec<&str> = padded_str.split( "\\" ).collect();
   split[0]
 }
+
+/// Path is File
+pub fn is_file ( path: &PathBuf ) -> bool { path.is_file() }
+
+/// Path is Directory
+pub fn is_dir ( path: &PathBuf ) -> bool { path.is_dir() }
+
+/// Path has File Extension
+pub fn has_file_extension ( path: &PathBuf ) -> bool 
+{
+  match path.extension() 
+  {
+    None => return false,
+    Some(_) => return true
+  }
+}
+
+/// Create File
+pub fn create_file ( path: &PathBuf ) -> Result<File, Error> { File::create( path ) }
+
+/// Open File
+pub fn open_file ( path: &PathBuf ) -> Result<File, Error> { File::open( path ) }
+
+/// Check Path/File exists
+pub fn path_exists ( path: PathBuf ) -> Result<bool, Error> { exists( path ) }
 
 #[cfg(test)]
 mod tests 
@@ -147,5 +175,34 @@ mod tests
     assert_eq!( 0x123u32.to_le_bytes().len(), 4 );
     assert_eq!( u32::MAX.to_le_bytes().len(), 4 ); // 4294967295
     assert_eq!( 0x0u32.to_le_bytes().len(), 4 );
+  }
+
+  #[test]
+  fn test_page_start () 
+  {
+    let astr = String::from( "PageStart" );
+    assert_eq!( astr.into_bytes().len(), 9 );
+  }
+
+  #[test]
+  fn test_is_file () 
+  {
+    assert_eq!( is_file( &PathBuf::from( "../test_data/empty.sdb" )), true );
+    assert_eq!( is_file( &PathBuf::from( "../test_data/nope.sdb" )), false );
+  }
+
+  #[test]
+  fn test_is_dir () 
+  {
+    assert_eq!( is_dir( &PathBuf::from( "../test_data" )), true );
+    assert_eq!( is_dir( &PathBuf::from( "../test_data/" )), true );
+    assert_eq!( is_dir( &PathBuf::from( "../nope" )), false );
+  }
+
+  #[test]
+  fn test_has_file_extension () 
+  {
+    assert_eq!( has_file_extension( &PathBuf::from( "../test_data/empty.sdb" )), true );
+    assert_eq!( has_file_extension( &PathBuf::from( "../test_data" )), false );
   }
 }

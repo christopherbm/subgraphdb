@@ -8,8 +8,7 @@ common = { path = "./common" }
 sdb = { path = "./sdb" }
 sdb_config = { path = "./sdb_config" }
 cli = { path = "./cli" }
-fdm = { path = "./fdm" }
 datagram = { path = "./datagram" }
 
 [workspace]
-members = [ "common", "sdb", "sdb_config", "fdm", "cli", "datagram" , "graph", "api", "utils", "cmd", "planner", "executor"]
+members = [ "common", "sdb", "sdb_config", "cli", "datagram" , "graph", "api", "utils", "cmd", "planner", "executor", "parser"]

@@ -9,9 +9,6 @@ version = "0.1.0"
 [[package]]
 name = "cli"
 version = "0.1.0"
-dependencies = [
- "fdm",
-]
 
 [[package]]
 name = "cmd"
@@ -24,13 +21,12 @@ version = "0.1.0"
 [[package]]
 name = "datagram"
 version = "0.1.0"
+dependencies = [
+ "utils",
+]
 
 [[package]]
 name = "executor"
-version = "0.1.0"
-
-[[package]]
-name = "fdm"
 version = "0.1.0"
 dependencies = [
  "datagram",
@@ -41,6 +37,10 @@ name = "graph"
 version = "0.1.0"
 
 [[package]]
+name = "parser"
+version = "0.1.0"
+
+[[package]]
 name = "planner"
 version = "0.1.0"
 
@@ -48,7 +48,6 @@ version = "0.1.0"
 name = "sdb"
 version = "0.1.0"
 dependencies = [
- "fdm",
  "sdb_config",
 ]
 
@@ -63,7 +62,6 @@ dependencies = [
  "cli",
  "common",
  "datagram",
- "fdm",
  "sdb",
  "sdb_config",
 ]

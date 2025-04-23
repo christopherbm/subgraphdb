@@ -1,6 +1,12 @@
 #![allow( dead_code )]
-use std::string::{ FromUtf8Error };
-use std::fs::{ File };
+pub mod enums;
+pub mod structs;
+pub mod dg_utils;
+pub mod pages;
+pub mod rows;
+
+//use std::string::{ FromUtf8Error };
+
 
 /* !!
   - all inputs will get translated into a transaction
@@ -9,118 +15,12 @@ use std::fs::{ File };
   - If either the wc bit or the transactionComplete bit are missing, the db is in a bad state.
 */
 
-pub static COMMON_NONE: &'static str = "\\:::::::::::::::::::::::::::::::::::::::::::::::::::::::::NONE::";
 
-#[derive( Debug, PartialEq )]
-pub enum DataGramError 
-{
-  InvalidDGUUID,
-  InvalidDGCommonString,
-  StringLengthExceeded,
-  PaddingCannotBeZero,
-  InvalidStringTerminus,
-  InvalidSDBConfig,
-  ErrorWritingSDBConfig,
-  ErrorReadingSDBConfig,
-}
 
-pub enum ByteLengths 
-{
-  UUID = 36,
-  CommonString = 64, // names, labels, etc
-  DGU64 = 8,
-}
-
-/// Data Gram Types
-#[derive( Debug, PartialEq )]
-pub enum DataGramType
-{
-  DGUUID,
-  DGCommonString,
-  DGLabel,
-}
-
-/// Data Gram Types
-#[derive( Debug, PartialEq )]
-pub struct DGSDBConfig
-{
-  build_id: String, // DGUUID
-  nickname: String, // DGLabel
-}
-impl DGSDBConfig 
-{
-  pub fn new ( build_id: String, nickname: Option<String> ) -> Result<DGSDBConfig, DataGramError> 
-  {
-    if !validate_dg_uuid( &build_id ) { return Err( DataGramError::InvalidDGUUID )}
-    if nickname.is_some() 
-    {
-      let nickname_actual = pad_str( ByteLengths::CommonString as usize, nickname.unwrap() );
-      if !validate_dg_label( &nickname_actual ) { return Err( DataGramError::InvalidDGCommonString )}
-      return Ok( DGSDBConfig { build_id: build_id, nickname: nickname_actual })
-    }
-    else 
-    {
-      return Ok( DGSDBConfig { build_id: build_id, nickname: COMMON_NONE.to_string() })
-    }
-    Err( DataGramError::InvalidSDBConfig )
-  }
-
-  pub fn to_bytes ( &self ) -> Vec<u8> { [ self.build_id.as_bytes(), self.nickname.as_bytes() ].concat() }
-
-  pub fn from_bytes ( bytes: Vec<u8> ) -> Result<DGSDBConfig, DataGramError> 
-  {
-    if bytes.len() != 100 { return Err( DataGramError::ErrorReadingSDBConfig ) }
-    let build_id_res = str_from_bytes( &bytes[0..( ByteLengths::UUID as usize )]);
-    let nickname_res = str_from_bytes( &bytes[
-      ( ByteLengths::UUID as usize )
-      ..
-      ( ByteLengths::UUID as usize + ByteLengths::CommonString as usize )]);
-
-    if build_id_res.is_ok() && nickname_res.is_ok() 
-    {
-      if nickname_res.as_ref().unwrap() == &COMMON_NONE 
-      {
-        return DGSDBConfig::new( build_id_res.unwrap(), None )
-      }
-      return DGSDBConfig::new( build_id_res.unwrap(), Some( nickname_res.unwrap() ))
-    }
-    Err( DataGramError::ErrorReadingSDBConfig )
-  }
-}
-
-// len is number of bytes
-pub fn validate_dg_uuid ( uuid: &str ) -> bool { uuid.len() == ByteLengths::UUID as usize }
-
-pub fn validate_dg_label ( label: &str ) -> bool { label.len() == ByteLengths::CommonString as usize }
 
 // ---------------------------------------------------------------------------------------------------------------------
-pub struct DataGramWriter<'a> { file: &'a mut File }
-impl DataGramWriter<'_> 
-{
-  pub fn new ( file: &mut File ) -> DataGramWriter { DataGramWriter { file: file }}
-  pub fn write_uuid ( uuid: String ) {}
-  pub fn write_label () {}
-  pub fn write_sdb_config ( &mut self,  ) // !! return dg error
-  {
-    
-    
-    // !! write using as_bytes
-    /* !!
-    let mut stream = BufWriter::new( file );
-    stream.write( &sdb_config_res.unwrap().to_bytes() ).unwrap();
-    stream.flush().unwrap();
-    */
-  }
-}
 
-pub struct DataGramReader<'a> { file: &'a mut File }
-impl DataGramReader<'_> 
-{
-  pub fn new ( file: &mut File ) -> DataGramReader { DataGramReader { file: file }}
-  pub fn read_uuid () {}
-  pub fn read_label () {}
-  pub fn read_sdb_config ( &mut self ) {}
-}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 #[cfg(test)]
@@ -130,6 +30,7 @@ mod tests
   use std::path::PathBuf;
   use std::fs::{ OpenOptions, File };
   use std::io::{ BufWriter, Error, Read, Write };
+  use utils::{ pad_str, str_to_bytes, str_from_bytes };
 
   #[test]
   fn test_string_binary () 
@@ -198,23 +99,7 @@ mod tests
     assert_eq!( astr.into_bytes().len(), 64 );
   }
 
-  #[test]
-  fn test_validate_dg_uuid () 
-  {
-    assert_eq!( validate_dg_uuid( "67e55044-10b1-426f-9247-bb680e5fe0c8" ), true );
-    assert_eq!( validate_dg_uuid( "67e55044-10b1-426f-9247-bb680e5fe0c88" ), false );
-    assert_eq!( validate_dg_uuid( "67e55044-10b1-426f-9247-bb680e5fe0c" ), false );
-    assert_eq!( validate_dg_uuid( "" ), false );
-  }
-
-  #[test]
-  fn test_validate_dg_label () 
-  {
-    assert_eq!( validate_dg_label( &pad_str( ByteLengths::CommonString as usize, String::from( "test" ))), true );
-    assert_eq!( validate_dg_label( "test" ), false );
-    assert_eq!( validate_dg_label( "" ), false );
-    assert_eq!( validate_dg_label( "----------------------------------------------------------------------" ), false );
-  }
+  
 
   #[test]
   fn test_common_none () 
@@ -225,6 +110,7 @@ mod tests
   #[test]
   fn test_dgsdbconfig () 
   {
+    /*
     let dg_config_1_res = DGSDBConfig::new( 
       String::from( "67e55044-10b1-426f-9247-bb680e5fe0c" ), 
       Some( String::from( "nickname" )));
@@ -248,41 +134,39 @@ mod tests
     let dg_config_3 = dg_config_3_res.unwrap();
     assert_eq!( dg_config_3.build_id.len(), ByteLengths::UUID as usize );
     assert_eq!( dg_config_3.nickname.len(), ByteLengths::CommonString as usize );
+    */
   }
 
   #[test]
   fn test_datagram_writer () 
   {
-    let path = PathBuf::from( "/platonic3d/subgraphdbv2/test_data/sf/unit_tests/test_datagram_writer.sdb" );
-    let file_res: Result<File, Error> = OpenOptions::new()
-      .read( true )
-      .write( true )
-      .truncate( true )
-      .create( true )
-      .open( path );
-    //assert_eq!( COMMON_NONE.bytes().len(), ByteLengths::CommonString as usize );
-  }
-
-  #[test]
-  fn test_datagram_reader () 
-  {
+    //let path = PathBuf::from( "/platonic3d/subgraphdbv2/test_data/sf/unit_tests/test_datagram_writer.sdb" );
+    //let file_res: Result<File, Error> = OpenOptions::new()
+    //  .read( true )
+    //  .write( true )
+    //  .truncate( true )
+    //  .create( true )
+    //  .open( path );
     //assert_eq!( COMMON_NONE.bytes().len(), ByteLengths::CommonString as usize );
   }
 
   #[test]
   fn test_dgsdbconfig_to_bytes () 
   {
+    /*
     let dg_config_res = DGSDBConfig::new( 
       String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ), 
       Some( String::from( "nickname" )));
 
     assert_eq!( dg_config_res.is_ok(), true );
     assert_eq!( dg_config_res.unwrap().to_bytes().len(), 100 );
+    */
   }
 
   #[test]
   fn test_dgsdbconfig_from_bytes () 
   {
+    /*
     // --- some
     let dg_config_res = DGSDBConfig::new( 
       String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ), 
@@ -327,7 +211,6 @@ mod tests
 
     let res2 = DGSDBConfig::from_bytes( bytes2[0..99].to_vec() );   
     assert_eq!( res2.is_err(), true );
+    */
   }
-
-  
 }

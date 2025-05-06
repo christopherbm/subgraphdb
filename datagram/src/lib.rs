@@ -1,4 +1,3 @@
-#![allow( dead_code )]
 pub mod enums;
 pub mod structs;
 pub mod dg_utils;
@@ -15,202 +14,88 @@ pub mod rows;
   - If either the wc bit or the transactionComplete bit are missing, the db is in a bad state.
 */
 
-
-
-
-// ---------------------------------------------------------------------------------------------------------------------
-
-
-// ---------------------------------------------------------------------------------------------------------------------
-
 #[cfg(test)]
 mod tests 
 {
-  use super::*;
+  /*
   use std::path::PathBuf;
-  use std::fs::{ OpenOptions, File };
-  use std::io::{ BufWriter, Error, Read, Write };
-  use utils::{ pad_str, str_to_bytes, str_from_bytes };
+  use std::io::{ BufWriter, Write };
+  use utils::create_file;
+  use crate::pages::SDBConfigPage;
+  use crate::enums::{ DataGramError };
+  use crate::structs::GraphRef;
+  */
 
   #[test]
-  fn test_string_binary () 
+  fn manage_test_data () 
   {
-    let bytes: Vec<_> = b"test".to_vec();
-    assert_eq!( bytes, [116, 101, 115, 116] );
-
-    let string = String::from_utf8( bytes ).expect( "invalid utf8" );
-    assert_eq!( string, "test" );
-
-    let bytes: Vec<_> = b"/".to_vec();
-    assert_eq!( bytes.len(), 1 );
-
-    let bytes: Vec<_> = b"[".to_vec();
-    assert_eq!( bytes.len(), 1 );
-
-    let bytes: Vec<_> = b"]".to_vec();
-    assert_eq!( bytes.len(), 1 );
-  }
-
-  #[test]
-  fn test_vec_slices () 
-  {
-    let bytes: Vec<_> = str_to_bytes( String::from( "testtest" ) ).to_vec();
-    assert_eq!( &bytes[0..4], [116, 101, 115, 116] );
-    assert_eq!( &bytes[4..8], [116, 101, 115, 116] );
-    
-    let res1 = str_from_bytes( &bytes[0..4] );
-    assert_eq!( res1.is_ok(), true );
-    assert_eq!( res1.unwrap(), "test" );
-
-    let res2 = str_from_bytes( &bytes[4..8] );
-    assert_eq!( res2.is_ok(), true );
-    assert_eq!( res2.unwrap(), "test" );
-  }
-
-  #[test]
-  fn test_str_len () 
-  {
-    let astr = String::from( "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" );
-    assert_eq!( astr.into_bytes().len(), 64 );
-  
-    let esc = String::from( "\\" );
-    assert_eq!( esc.into_bytes().len(), 1 );
-  }  
-
-  #[test]
-  fn test_u64_binary () 
-  {
-    assert_eq!( 0x123u64.to_le_bytes().len(), 8 );
-    assert_eq!( 0x1234567890123456u64.to_le_bytes().len(), 8 );
-    assert_eq!( 0x0u64.to_le_bytes().len(), 8 );
-  }
-
-  #[test]
-  fn test_uuid () 
-  {
-    let double_uuid = String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" );
-    assert_eq!( double_uuid.into_bytes().len(), 36 );
-  }
-
-  #[test]
-  fn test_str_length () 
-  {
-    let astr = String::from( "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" );
-    assert_eq!( astr.into_bytes().len(), 64 );
-  }
-
-  
-
-  #[test]
-  fn test_common_none () 
-  {
-    assert_eq!( COMMON_NONE.bytes().len(), ByteLengths::CommonString as usize );
-  }
-
-  #[test]
-  fn test_dgsdbconfig () 
-  {
+    /* Create a sf db file with no graphs */
     /*
-    let dg_config_1_res = DGSDBConfig::new( 
-      String::from( "67e55044-10b1-426f-9247-bb680e5fe0c" ), 
-      Some( String::from( "nickname" )));
+    let page_size: usize = 4096;
+    let path = PathBuf::from( "./test_data/new_sf_db.sdb" );
 
-    assert_eq!( dg_config_1_res.is_err(), true );
-    assert_eq!( dg_config_1_res, Err( DataGramError::InvalidDGUUID ));
+    let config_res: Result<SDBConfigPage, DataGramError> = SDBConfigPage::new( 
+      String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8::::" ), 
+      String::from( "nickname" ),
+      Vec::new() );
 
-    let dg_config_2_res = DGSDBConfig::new( 
-      String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ), 
-      Some( String::from( "----------------------------------------------------------------------" )));
-
-    assert_eq!( dg_config_2_res.is_err(), true );
-    assert_eq!( dg_config_2_res, Err( DataGramError::InvalidDGCommonString ));
+    let create_file_res = create_file( &path );
     
-    let dg_config_3_res = DGSDBConfig::new( 
-      String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ), 
-      Some( String::from( "nickname" )));
-
-    assert_eq!( dg_config_3_res.is_ok(), true );
-
-    let dg_config_3 = dg_config_3_res.unwrap();
-    assert_eq!( dg_config_3.build_id.len(), ByteLengths::UUID as usize );
-    assert_eq!( dg_config_3.nickname.len(), ByteLengths::CommonString as usize );
+    let mut stream = BufWriter::new( create_file_res.unwrap() );
+    stream.write( &config_res.unwrap().to_rows( &page_size ) ).unwrap();
+    stream.flush().unwrap();
     */
-  }
 
-  #[test]
-  fn test_datagram_writer () 
-  {
-    //let path = PathBuf::from( "/platonic3d/subgraphdbv2/test_data/sf/unit_tests/test_datagram_writer.sdb" );
-    //let file_res: Result<File, Error> = OpenOptions::new()
-    //  .read( true )
-    //  .write( true )
-    //  .truncate( true )
-    //  .create( true )
-    //  .open( path );
-    //assert_eq!( COMMON_NONE.bytes().len(), ByteLengths::CommonString as usize );
-  }
 
-  #[test]
-  fn test_dgsdbconfig_to_bytes () 
-  {
+    /* Create a sf db file with 1 graph_ref */
     /*
-    let dg_config_res = DGSDBConfig::new( 
-      String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ), 
-      Some( String::from( "nickname" )));
+    let page_size: usize = 4096;
+    let path = PathBuf::from( "./test_data/sf_db_1_ref.sdb" );
 
-    assert_eq!( dg_config_res.is_ok(), true );
-    assert_eq!( dg_config_res.unwrap().to_bytes().len(), 100 );
+    let gr_res = GraphRef::new( String::from( "graph1" ));
+    let mut grs = Vec::new();
+    grs.push( gr_res.unwrap() );
+
+    let config_res: Result<SDBConfigPage, DataGramError> = SDBConfigPage::new( 
+      String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8::::" ), 
+      String::from( "nickname" ),
+      grs );
+
+    let create_file_res = create_file( &path );
+    
+    let mut stream = BufWriter::new( create_file_res.unwrap() );
+    stream.write( &config_res.unwrap().to_rows( &page_size ) ).unwrap();
+    stream.flush().unwrap();
     */
-  }
 
-  #[test]
-  fn test_dgsdbconfig_from_bytes () 
-  {
+
+    /* Create a sf db file with 10 graph_ref */
     /*
-    // --- some
-    let dg_config_res = DGSDBConfig::new( 
-      String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ), 
-      Some( String::from( "nickname" )));
-    assert_eq!( dg_config_res.is_ok(), true );
+    let page_size: usize = 4096;
+    let path = PathBuf::from( "./test_data/sf_db_10_ref.sdb" );
 
-    let bytes = dg_config_res.unwrap().to_bytes();
-    assert_eq!( bytes.len(), 100 );
+    let mut grs = Vec::new();
+    grs.push( GraphRef::new( String::from( "graph1" )).unwrap() );
+    grs.push( GraphRef::new( String::from( "graph2" )).unwrap() );
+    grs.push( GraphRef::new( String::from( "graph3" )).unwrap() );
+    grs.push( GraphRef::new( String::from( "graph4" )).unwrap() );
+    grs.push( GraphRef::new( String::from( "graph5" )).unwrap() );
+    grs.push( GraphRef::new( String::from( "graph6" )).unwrap() );
+    grs.push( GraphRef::new( String::from( "graph7" )).unwrap() );
+    grs.push( GraphRef::new( String::from( "graph8" )).unwrap() );
+    grs.push( GraphRef::new( String::from( "graph9" )).unwrap() );
+    grs.push( GraphRef::new( String::from( "graph10" )).unwrap() );
+
+    let config_res: Result<SDBConfigPage, DataGramError> = SDBConfigPage::new( 
+      String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8::::" ), 
+      String::from( "nickname" ),
+      grs );
+
+    let create_file_res = create_file( &path );
     
-    let res = DGSDBConfig::from_bytes( bytes );   
-    assert_eq!( res.is_ok(), true );
-    
-    let config = res.unwrap();
-    assert_eq!( config.build_id, String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ));
-    assert_eq!( config.nickname, pad_str( ByteLengths::CommonString as usize, String::from( "nickname" )));
-    
-    // -- none
-    let dg_config_res1 = DGSDBConfig::new( 
-      String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ), 
-      None );
-    assert_eq!( dg_config_res1.is_ok(), true );
-
-    let bytes1 = dg_config_res1.unwrap().to_bytes();
-    assert_eq!( bytes1.len(), 100 );
-
-    let res1 = DGSDBConfig::from_bytes( bytes1 );   
-    assert_eq!( res1.is_ok(), true );
-    
-    let config1 = res1.unwrap();
-    assert_eq!( config1.build_id, String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ));
-    assert_eq!( config1.nickname, COMMON_NONE );
-
-
-    // -- error
-    let dg_config_res2 = DGSDBConfig::new( 
-      String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ), 
-      None );
-    assert_eq!( dg_config_res2.is_ok(), true );
-
-    let bytes2 = dg_config_res2.unwrap().to_bytes();
-    assert_eq!( bytes2.len(), 100 );
-
-    let res2 = DGSDBConfig::from_bytes( bytes2[0..99].to_vec() );   
-    assert_eq!( res2.is_err(), true );
+    let mut stream = BufWriter::new( create_file_res.unwrap() );
+    stream.write( &config_res.unwrap().to_rows( &page_size ) ).unwrap();
+    stream.flush().unwrap();
     */
   }
 }

@@ -86,6 +86,66 @@ mod tests
   use super::*;
 
   #[test]
+  fn test_string_binary () 
+  {
+    let bytes: Vec<_> = b"test".to_vec();
+    assert_eq!( bytes, [116, 101, 115, 116] );
+
+    let string = String::from_utf8( bytes ).expect( "invalid utf8" );
+    assert_eq!( string, "test" );
+
+    let bytes: Vec<_> = b"/".to_vec();
+    assert_eq!( bytes.len(), 1 );
+
+    let bytes: Vec<_> = b"[".to_vec();
+    assert_eq!( bytes.len(), 1 );
+
+    let bytes: Vec<_> = b"]".to_vec();
+    assert_eq!( bytes.len(), 1 );
+  }
+
+  #[test]
+  fn test_vec_slices () 
+  {
+    let bytes: Vec<_> = str_to_bytes( String::from( "testtest" ) ).to_vec();
+    assert_eq!( &bytes[0..4], [116, 101, 115, 116] );
+    assert_eq!( &bytes[4..8], [116, 101, 115, 116] );
+    
+    let res1 = str_from_bytes( &bytes[0..4] );
+    assert_eq!( res1.is_ok(), true );
+    assert_eq!( res1.unwrap(), "test" );
+
+    let res2 = str_from_bytes( &bytes[4..8] );
+    assert_eq!( res2.is_ok(), true );
+    assert_eq!( res2.unwrap(), "test" );
+  }
+
+  #[test]
+  fn test_str_len () 
+  {
+    let astr = String::from( "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" );
+    assert_eq!( astr.into_bytes().len(), 64 );
+  
+    let esc = String::from( "\\" );
+    assert_eq!( esc.into_bytes().len(), 1 );
+  }
+
+  #[test]
+  fn test_u64_binary () 
+  {
+    assert_eq!( 0x123u64.to_le_bytes().len(), 8 );
+    assert_eq!( 0x1234567890123456u64.to_le_bytes().len(), 8 );
+    assert_eq!( 0x0u64.to_le_bytes().len(), 8 );
+  }
+
+  #[test]
+  fn test_uuid () 
+  {
+    let double_uuid = String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8::::" );
+    assert_eq!( double_uuid.into_bytes().len(), 40 );
+  }
+
+  #[test]
   fn test_str_from_bytes () 
   {
     let res = str_from_bytes( &[116, 101, 115, 116] );

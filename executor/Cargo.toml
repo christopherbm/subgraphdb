@@ -4,5 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+common = { path = "../common" }
 datagram = { path = "../datagram" }
 utils = { path = "../utils" }
+cmd = { path = "../cmd" }
+
+[dev-dependencies]
+planner = { path = "../planner" }

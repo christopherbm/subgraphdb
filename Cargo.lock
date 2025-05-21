@@ -13,6 +13,9 @@ version = "0.1.0"
 [[package]]
 name = "cmd"
 version = "0.1.0"
+dependencies = [
+ "common",
+]
 
 [[package]]
 name = "common"
@@ -29,7 +32,10 @@ dependencies = [
 name = "executor"
 version = "0.1.0"
 dependencies = [
+ "cmd",
+ "common",
  "datagram",
+ "planner",
  "utils",
 ]
 
@@ -41,12 +47,19 @@ version = "0.1.0"
 name = "parser"
 version = "0.1.0"
 dependencies = [
+ "cmd",
  "tokenize",
 ]
 
 [[package]]
 name = "planner"
 version = "0.1.0"
+dependencies = [
+ "cmd",
+ "common",
+ "parser",
+ "tokenize",
+]
 
 [[package]]
 name = "sdb"
@@ -66,6 +79,7 @@ dependencies = [
  "cli",
  "common",
  "datagram",
+ "planner",
  "sdb",
  "sdb_config",
 ]

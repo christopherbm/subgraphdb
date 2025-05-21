@@ -9,6 +9,8 @@ sdb = { path = "./sdb" }
 sdb_config = { path = "./sdb_config" }
 cli = { path = "./cli" }
 datagram = { path = "./datagram" }
+planner = { path = "./planner" }
 
 [workspace]
-members = [ "common", "sdb", "sdb_config", "cli", "datagram" , "graph", "api", "utils", "cmd", "planner", "executor", "parser", "tokenize"]
+members = [ "common", "sdb", "sdb_config", "cli", "datagram" , "graph", "api", "utils", "cmd", "planner", 
+"executor", "parser", "tokenize"]

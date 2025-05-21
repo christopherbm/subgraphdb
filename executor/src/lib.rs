@@ -3,6 +3,7 @@ use std::io::{ BufWriter, Write };
 use utils::{ create_file };
 use datagram::pages::{ SDBConfigPage };
 use datagram::enums::DataGramError;
+use cmd::{ Transaction, CreateGraph, CreateNode, CreateEdge, CreateNodeRef };
 
 /*
 // !! page size needs to be configurable, but row size will be fixed. Page size cannot be changed after db creation.
@@ -14,7 +15,7 @@ use datagram::enums::DataGramError;
   writes but the reads will have "point-in-time" consistency.
 
 // ---------------
-MATCH (p:Person) FROM movies RETURN p LIMIT 5
+
 
 */
 
@@ -23,28 +24,50 @@ MATCH (p:Person) FROM movies RETURN p LIMIT 5
 // read_sdb_config_page
 // read_graph_page
 
+/*
+  - Create Graph
+    - how many SDBConfigPages are there?
+    - SDBConfigPage(s) has graph?
+*/
+
 /// Executes a Transaction
-pub fn execute_transaction () {}
+pub fn execute_transaction ( t: &Transaction ) 
+{
+  println!( "{}", t );
+  if t.create_graph.is_some() 
+  {
+    let cg_res = execute_create_graph( t.create_graph.as_ref().unwrap() );
+  }
+}
 
-pub fn create_im_db () {}
-pub fn create_sf_db () {}
-pub fn create_mf_db () {}
+fn execute_create_graph ( cg: &CreateGraph ) -> Result<bool, String> 
+{
+  println!( "{:?}", cg );
+  Ok( true )
+}
 
-pub fn create_graph () {}
+fn execute_create_node ( nodes: Vec<CreateNode> ) 
+{}
 
-pub fn write_sdb_config () {}
-pub fn read_sdb_config () {}
+fn execute_create_edges ( edges: Vec<CreateEdge> ) 
+{}
 
 #[cfg(test)]
 mod tests 
 {
   use super::*;
   use std::fs::{ remove_file, metadata };
+  use planner::{ process_query };
 
   #[test]
   fn test_execute_transaction () 
   {
-    assert_eq!( true, true );
+    let query_string = "CREATE GRAPH devs";
+    let trans:Transaction = process_query( query_string );
+    execute_transaction( &trans );
+    
+
+    //assert_eq!( true, true );
   }
 
   #[test]

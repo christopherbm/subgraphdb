@@ -62,3 +62,21 @@ Chapter C - Utility Functions
       - Will likely need the concept of a "lease" on writable resources or discrete sections like pages.
       - Pages can also be linked-lists.
 */
+
+/*
+  CREATE GRAPH devs
+
+  MATCH (n:Person {name:'Anna'})
+  RETURN n.born AS birthYear
+  FROM people
+
+  MATCH (:Person {name: 'Anna'})-[r:KNOWS WHERE r.since < 2020]->(friend:Person)
+  RETURN count(r) As numberOfFriends
+  FROM people
+*/
+
+#[cfg(test)]
+mod tests 
+{
+
+}

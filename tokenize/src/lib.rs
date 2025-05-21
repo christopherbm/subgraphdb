@@ -1,12 +1,47 @@
+#[derive( Debug, Clone )]
+pub struct SyntaxToken
+{ 
+  pub token_type: SyntaxTokenType,
+  pub val: String,
+}
+
+pub fn cons_syntax_token ( token_type: SyntaxTokenType, val: String ) -> SyntaxToken 
+{
+  SyntaxToken { token_type: token_type, val: val }
+}
+
+#[derive( Debug, PartialEq, Clone )]
+pub enum SyntaxTokenType 
+{
+  KeywordCreate, KeywordGraph, KeywordReturn, KeywordAs, KeywordWhere,
+  KeywordFrom, KeywordInsert, KeywordInto, KeywordMatch,
+
+  Label, PrimaryLabel,
+  OpenNode, CloseNode,
+  OpenEdge, CloseEdge,
+  EdgeDirection, EdgeLeft, EdgeRight,
+  OpenBrace, CloseBrace,
+  Key, Value,
+}
+
+#[derive( Debug, PartialEq )]
+pub enum Keyword 
+{
+  Create, Graph, Return, As, Where, From, Insert, Into, Match,
+}
+
 #[derive( Debug, PartialEq )]
 pub enum TokenType 
 {
   Space, NewLine,
   OpenParen, CloseParen,
   OpenBracket, CloseBracket,
+  OpenBrace, CloseBrace,
+  Quote,
   FrontSlash,
-  Hyphen, Colon,
+  Hyphen, Colon, Comma,
   Char,
+  LT, GT,
 }
 
 pub fn token_type ( c: &char ) -> TokenType 
@@ -20,6 +55,13 @@ pub fn token_type ( c: &char ) -> TokenType
   if is_close_bracket( c ) { return TokenType::CloseBracket }
   if is_front_slash( c ) { return TokenType::FrontSlash }
   if is_new_line( c ) { return TokenType::NewLine }
+  if is_open_brace( c ) { return TokenType::OpenBrace }
+  if is_close_brace( c ) { return TokenType::CloseBrace }
+  if is_squote( c ) { return TokenType::Quote }
+  if is_dquote( c ) { return TokenType::Quote }
+  if is_comma( c ) { return TokenType::Comma }
+  if is_open_lt( c ) { return TokenType::LT }
+  if is_close_gt( c ) { return TokenType::GT }
   TokenType::Char
 }
 

@@ -2,6 +2,15 @@ use std::string::{ FromUtf8Error };
 use std::path::PathBuf;
 use std::fs::{ File, exists };
 use std::io::Error;
+use uuid::Uuid;
+
+// padded
+pub fn cons_uuid () -> String 
+{
+  let mut ret: String = String::from( Uuid::new_v4().to_string() );
+  ret.push_str( "::::" );
+  ret
+}
 
 /// Convert Byte Array into String
 pub fn str_from_bytes ( bytes: &[u8] ) -> Result<String, FromUtf8Error> 
@@ -23,6 +32,16 @@ fn gen_pad_str ( length: usize ) -> String
   let mut ret = String::from( "\\" );
   while &ret.len() < &length { ret.push_str( ":" ); }
   ret
+}
+
+pub fn process_str ( max_len: usize, str_to_proc: String ) -> Result<String, String> 
+{
+  let start_size: usize = str_to_proc.clone().into_bytes().len();
+  if start_size > max_len { return Err( String::from( "String too long" )); }
+  if start_size == max_len { return Ok( str_to_proc ); }
+
+  let padding = gen_pad_str( &max_len - &start_size );
+  Ok( str_to_proc + &padding )
 }
 
 /// Pad String to given length

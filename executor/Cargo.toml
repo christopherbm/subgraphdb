@@ -6,8 +6,13 @@ edition = "2024"
 [dependencies]
 common = { path = "../common" }
 datagram = { path = "../datagram" }
+datagramv2 = { path = "../datagramv2" }
 utils = { path = "../utils" }
 cmd = { path = "../cmd" }
+
+[dependencies.uuid]
+version = "1.17.0"
+features = [ "v4" ]
 
 [dev-dependencies]
 planner = { path = "../planner" }

@@ -8,3 +8,4 @@ common = { path = "../common" }
 parser = { path = "../parser" }
 cmd = { path = "../cmd" }
 tokenize = { path = "../tokenize" }
+utils = { path = "../utils" }

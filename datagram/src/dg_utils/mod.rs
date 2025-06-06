@@ -8,23 +8,9 @@ pub fn validate_dg_uuid ( uuid: &str ) -> bool { uuid.len() == DGUUID_BYTES }
 
 pub fn validate_dg_label ( label: &str ) -> bool { label.len() == DGLABEL_BYTES }
 
-pub fn next_row_prefix ( f: &mut File ) -> Option<String>
-{
-  let mut prefix_buffer = [ 0; ROW_PREFIX_BYTES ];
-  let _ = f.read_exact( &mut prefix_buffer );
-  let prefix_res = str_from_bytes( &prefix_buffer.to_vec() );
-  if prefix_res.is_ok() { return Some( prefix_res.unwrap() );}
-  None
-}
 
-pub fn next_label ( f: &mut File ) -> Option<String> 
-{
-  let mut label_buffer = [ 0; DGLABEL_BYTES ];
-  let _ = f.read_exact( &mut label_buffer );
-  let label_res = str_from_bytes( &label_buffer.to_vec() );
-  if label_res.is_ok() { return Some( label_res.unwrap() );}
-  None
-}
+
+
 
 #[cfg(test)]
 mod tests 

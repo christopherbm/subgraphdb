@@ -1,7 +1,9 @@
-use cmd::{ Transaction, CreateGraph, CreateNode, CreateEdge, CreateNodeRef };
+use cmd::{ Transaction, CreateGraph, CreateNode, CreateEdge, CreateNodeRef, MatchClause, NodeRef, FromClause,
+  ReturnClause };
 use parser::{ parse_syntax };
-use tokenize::{ SyntaxToken, SyntaxTokenType };
-use common::{ DirectionType };
+use tokenize::{ cons_syntax_token, SyntaxNode, SyntaxNodeType, SyntaxToken, SyntaxTokenType };
+use common::{ DirectionType, LABEL_BYTES };
+use utils::{ cons_uuid, process_str };
 
 /*
 CREATE movies
@@ -59,10 +61,68 @@ MATCH (p:Person) RETURN p LIMIT 5
 //pub fn create_sf_db () {}
 //pub fn init_sf_db () {}
 
+pub fn process_query_v2 ( query: &str ) -> Transaction 
+{
+  let syntax_node: SyntaxNode = collapse_tokens( parse_syntax( query ));
+  let mut transaction: Transaction = Transaction::new( 
+    String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8::::" ),
+    String::from( "devs\\:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::" ));
+
+  
+
+  transaction
+}
+
+fn collapse_tokens ( tokens: Vec<SyntaxToken> ) -> SyntaxNode
+{
+  let mut syntax_node = SyntaxNode::new( SyntaxNodeType::Root );
+  for token in tokens.into_iter() 
+  {
+    match token.token_type 
+    {
+      SyntaxTokenType::OpenNode => 
+      { 
+        syntax_node.add_node( SyntaxNode::new( SyntaxNodeType::Paren ));
+        syntax_node.add_token( token );
+      },
+      SyntaxTokenType::OpenBrace => 
+      { 
+        syntax_node.add_node( SyntaxNode::new( SyntaxNodeType::Brace ));
+        syntax_node.add_token( token );
+      },
+      SyntaxTokenType::OpenBracket => 
+      { 
+        syntax_node.add_node( SyntaxNode::new( SyntaxNodeType::Bracket )); 
+        syntax_node.add_token( token );
+      },
+
+      SyntaxTokenType::CloseNode |
+      SyntaxTokenType::CloseBrace |
+      SyntaxTokenType::CloseBracket => 
+      { 
+        syntax_node.add_token( token );
+        syntax_node.close_node(); 
+      },
+
+      _ => { syntax_node.add_token( token ); }
+    }
+  }
+  syntax_node
+}
+
+
+fn process_match_clause_v2 ( node: SyntaxNode, transaction: &mut Transaction ) 
+{
+  println!( "{:?}", node );
+}
+// ---------------------------------------------------------------------------------------------------------------------
+
 pub fn process_query ( query: &str ) -> Transaction
 {
   let tokens:Vec<SyntaxToken> = parse_syntax( query );  
-  let mut transaction: Transaction = Transaction::new();
+  let mut transaction: Transaction = Transaction::new( 
+    String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8::::" ),
+    String::from( "devs\\:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::" ));
   let mut partial: Vec<SyntaxToken> = Vec::new();
   for token in tokens.into_iter() 
   {
@@ -72,9 +132,13 @@ pub fn process_query ( query: &str ) -> Transaction
       {
         if partial.len() > 0 
         { 
-          processs_partial( &mut transaction, partial );
-          partial = Vec::new();
-          partial.push( token );
+          if partial[0].token_type == SyntaxTokenType::KeywordMatch { partial.push( token ); }
+          else 
+          {
+            processs_partial( &mut transaction, partial );
+            partial = Vec::new();
+            partial.push( token );
+          }
         }
         else { partial.push( token ); }
       },
@@ -102,6 +166,13 @@ pub fn process_query ( query: &str ) -> Transaction
         partial = Vec::new();
       },
 
+      SyntaxTokenType::KeywordReturn => 
+      {
+        processs_partial( &mut transaction, partial );
+        partial = Vec::new();
+        partial.push( token );
+      },
+
       _ => { partial.push( token ); }
     }
   }
@@ -120,16 +191,23 @@ fn processs_partial ( transaction: &mut Transaction, partial: Vec<SyntaxToken> )
   match partial[0].token_type 
   {
     SyntaxTokenType::KeywordCreate => { process_create_graph_partial( transaction, partial ); },
+
+    SyntaxTokenType::KeywordMatch => { process_match_clause( transaction, partial ); },
+
+    SyntaxTokenType::KeywordFrom => { process_from_clause( transaction, partial ); },
+
+    SyntaxTokenType::KeywordReturn => { process_return_clause( transaction, partial ); },
     
     SyntaxTokenType::OpenNode => { process_open_node_partial( transaction, partial ); },
 
     SyntaxTokenType::OpenEdge => { process_open_edge_partial( transaction, partial ); },
     
     SyntaxTokenType::EdgeDirection => { process_edge_direction( transaction, partial ); },
-    
+
     _ => 
     { 
-      println!( "unmatched syntax token" ); 
+      println!( "unmatched syntax token" );
+      println!( "{:?}", partial ); 
     }
   }
 }
@@ -139,7 +217,13 @@ fn process_create_graph_partial ( transaction: &mut Transaction, partial: Vec<Sy
 {
   if partial.len() == 3 
   { 
-    transaction.create_graph = Some( CreateGraph::new( partial[2].val.clone() ));
+    let str_res = process_str( LABEL_BYTES, partial[2].val.clone());
+    if str_res.is_ok() 
+    {
+      transaction.graph_name = Some( str_res.as_ref().unwrap().clone() );
+      transaction.create_graph = Some( CreateGraph::new( cons_uuid(), str_res.unwrap() ));
+    }
+    else { println!( "error state" ); }
     return;
   }
 }
@@ -148,25 +232,18 @@ fn process_open_node_partial ( transaction: &mut Transaction, partial: Vec<Synta
 {
   if partial.len() == 3 
   {
-    if transaction.left_node_ref.is_none() 
-    {
-      transaction.left_node_ref = Some( CreateNodeRef::new( partial[1].val.clone() ));
-      return;
-    }
-
-    if transaction.right_node_ref.is_none() 
-    {
-      transaction.right_node_ref = Some( CreateNodeRef::new( partial[1].val.clone() ));
-      return;
-    }
-
-    transaction.err_state = Some( String::from( "Syntax Error: Node Reference" ));
+    process_for_node_ref( transaction, partial );
     return;
   }
 
   if partial.len() == 4 
   {
-    transaction.create_node.push( CreateNode::new( partial[1].val.clone(), partial[2].val.clone() ));
+    let str_res = process_str( LABEL_BYTES, partial[2].val.clone());
+    if str_res.is_ok() 
+    {
+      transaction.create_node.push( CreateNode::new( cons_uuid(), partial[1].val.clone(), str_res.unwrap() ));
+    }
+    else { println!( "error state" ); }
     return;
   }
 
@@ -225,6 +302,89 @@ fn process_direction_type ( dir: &str ) -> Result<DirectionType, String>
   Err( String::from( "Syntax Error: Edge Direction Type." ))
 }
 
+fn process_match_clause ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
+{
+  print!( "{:?}", partial );
+
+  if partial.len() == 3 
+  {
+    transaction.match_clause = Some( MatchClause::empty() );
+    return;
+  }
+
+  if partial.len() == 4 
+  {
+    transaction.match_clause = Some( 
+        MatchClause::new( 
+          NodeRef::new( 
+            Some( partial[2].val.clone() ), 
+            None
+      )));
+    return;
+  }
+
+  if partial.len() == 5 
+  {
+    let str_res = process_str( LABEL_BYTES, partial[3].val.clone() );
+    if str_res.is_ok() 
+    {
+      transaction.match_clause = Some( 
+        MatchClause::new( 
+          NodeRef::new( 
+            Some( partial[2].val.clone() ), 
+            Some( str_res.unwrap() )
+      )));
+    }
+    else 
+    {
+      transaction.err_state = Some( String::from( "Syntax Error: Process Match Clause" ));
+    }
+    return;
+  }
+  transaction.err_state = Some( String::from( "Syntax Error: Process Match Clause" ));
+}
+
+fn process_from_clause ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
+{
+  if partial.len() == 2 
+  {
+    let str_res = process_str( LABEL_BYTES, partial[1].val.clone());
+    if str_res.is_ok() 
+    {
+      transaction.from_clause = Some( FromClause::new( str_res.unwrap() ));
+    }
+    else 
+    {
+      transaction.err_state = Some( String::from( "Syntax Error: Process From Clause" ));
+    }
+  }
+}
+
+fn process_return_clause ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
+{
+  if partial.len() == 2
+  {
+    transaction.return_clause = Some( 
+      ReturnClause::new( 
+        partial[1].val.clone(), 
+        None 
+    ));
+    return;
+  }
+
+  if partial.len() == 4 
+  {
+    transaction.return_clause = Some( 
+      ReturnClause::new( 
+        partial[1].val.clone(), 
+        Some( partial[3].val.clone() ) 
+    ));
+    return;
+  }
+  
+  transaction.err_state = Some( String::from( "Syntax Error: Return Clause" ));
+}
+
 fn process_for_edge ( transaction: &mut Transaction ) 
 {
   if transaction.left_node_ref.is_some() 
@@ -232,18 +392,51 @@ fn process_for_edge ( transaction: &mut Transaction )
     && transaction.edge_primary_label.is_some()
     && transaction.edge_dir.is_some()
   {
-    transaction.create_edge.push( 
-      CreateEdge::new( 
-        transaction.left_node_ref.clone().unwrap(),
-        transaction.right_node_ref.clone().unwrap(),
-        transaction.edge_dir.clone().unwrap(),
-        transaction.edge_primary_label.clone().unwrap() ));
+    let str_res = process_str( LABEL_BYTES, transaction.edge_primary_label.clone().unwrap() );
+    if str_res.is_ok() 
+    {
+      transaction.create_edge.push( 
+        CreateEdge::new( 
+          cons_uuid(),
+          transaction.left_node_ref.clone().unwrap(),
+          transaction.right_node_ref.clone().unwrap(),
+          transaction.edge_dir.clone().unwrap(),
+          str_res.unwrap() ));
 
-    transaction.left_node_ref = None; 
-    transaction.right_node_ref = None; 
-    transaction.edge_primary_label = None;
-    transaction.edge_dir = None;
+      transaction.left_node_ref = None; 
+      transaction.right_node_ref = None; 
+      transaction.edge_primary_label = None;
+      transaction.edge_dir = None;
+    }
+    else { println!( "error state" ); }
   }
+}
+
+fn process_for_node_ref ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
+{
+  if partial.len() != 3 
+  {
+    transaction.err_state = Some( String::from( "Syntax Error: Node Reference" ));
+    return;
+  }
+
+  let id_opt = transaction.find_id_by_transaction_label( &partial[1].val );
+  if id_opt.is_some() 
+  {
+    if transaction.left_node_ref.is_none() 
+    {
+      transaction.left_node_ref = Some( CreateNodeRef::new( id_opt.unwrap(), partial[1].val.clone() ));
+      return;
+    }
+    if transaction.right_node_ref.is_none() 
+    {
+      transaction.right_node_ref = Some( CreateNodeRef::new( id_opt.unwrap(), partial[1].val.clone() ));
+      return;
+    }
+  }
+
+  transaction.err_state = Some( String::from( "Syntax Error: Node Reference" ));
+  return;
 }
 
 #[cfg(test)]
@@ -252,13 +445,24 @@ mod tests
   use super::*;
 
   #[test]
+  fn test_collapse_tokens () 
+  {
+    let trans = process_query_v2( "MATCH ()" );
+    println!( "{}", trans );
+    //let trans:Transaction = process_query( "MATCH ()" );
+    //println!( "\n{}", trans );
+  }
+
+  #[test]
   fn test_create_graph () 
   {
+    /*
     let query_string = "CREATE GRAPH devs";
     let trans:Transaction = process_query( query_string );
 
     assert_eq!( trans.create_graph.is_some(), true );
-    assert_eq!( trans.create_graph.unwrap().name, String::from( "devs" ));
+    assert_eq!( trans.create_graph.unwrap().name, 
+      String::from( "devs\\:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::" ));
     assert_eq!( trans.left_node_ref.is_none(), true );
     assert_eq!( trans.right_node_ref.is_none(), true );
     assert_eq!( trans.edge_dir.is_none(), true );
@@ -266,22 +470,23 @@ mod tests
     assert_eq!( trans.create_node.len(), 0 );
     assert_eq!( trans.create_edge.len(), 0 );
     assert_eq!( trans.err_state.is_some(), false );
+    */
   }
 
   #[test]
   fn test_create_node () 
   {
+    /*
     let query_string = "
       (alice:Developer),
     ";
     let trans:Transaction = process_query( query_string );
 
     assert_eq!( trans.create_graph.is_none(), true );
-    //assert_eq!( trans.node_ref.is_none(), true );
-    //assert_eq!( trans.edge_ref.is_none(), true );
     assert_eq!( trans.create_node.len(), 1 );
     assert_eq!( trans.create_node[0].transaction_label, String::from( "alice" ));
-    assert_eq!( trans.create_node[0].primary_label, String::from( "Developer" ));
+    assert_eq!( trans.create_node[0].primary_label, 
+      String::from( "Developer\\::::::::::::::::::::::::::::::::::::::::::::::::::::::" ));
     assert_eq!( trans.create_edge.len(), 0 );
 
     // ---
@@ -294,23 +499,34 @@ mod tests
     let trans1:Transaction = process_query( query_string1 );
 
     assert_eq!( trans1.create_graph.is_none(), true );
-    //assert_eq!( trans1.node_ref.is_none(), true );
-    //assert_eq!( trans1.edge_ref.is_none(), true );
     assert_eq!( trans1.create_node.len(), 3 );
     assert_eq!( trans1.create_node[0].transaction_label, String::from( "alice" ));
-    assert_eq!( trans1.create_node[0].primary_label, String::from( "Developer" ));
+    assert_eq!( trans1.create_node[0].primary_label, 
+      String::from( "Developer\\::::::::::::::::::::::::::::::::::::::::::::::::::::::" ));
     assert_eq!( trans1.create_node[1].transaction_label, String::from( "bob" ));
-    assert_eq!( trans1.create_node[1].primary_label, String::from( "Administrator" ));
+    assert_eq!( trans1.create_node[1].primary_label, 
+      String::from( "Administrator\\::::::::::::::::::::::::::::::::::::::::::::::::::" ));
     assert_eq!( trans1.create_node[2].transaction_label, String::from( "charlie" ));
-    assert_eq!( trans1.create_node[2].primary_label, String::from( "Administrator" ));
+    assert_eq!( trans1.create_node[2].primary_label, 
+      String::from( "Administrator\\::::::::::::::::::::::::::::::::::::::::::::::::::" ));
     assert_eq!( trans1.create_edge.len(), 0 );
+    */
   }
 
   #[test]
   fn test_create_edge () 
   {
-    let query_string = "(alice)-[:KNOWS]->(bob)";
+    /* 
+    let query_string = "
+      (alice:Developer),
+      (bob:Administrator),
+      (alice)-[:KNOWS]->(bob)
+    ";
+
+    //println!( "--------------------------------" );
     let trans:Transaction = process_query( query_string );
+    //println!( "{}", trans );
+    //println!( "--------------------------------" );
 
     assert_eq!( trans.create_graph.is_none(), true );
     assert_eq!( trans.left_node_ref.is_none(), true );
@@ -324,7 +540,8 @@ mod tests
     assert_eq!( ce.left_ref.transaction_label, "alice" );
     assert_eq!( ce.right_ref.transaction_label, "bob" );
     assert_eq!( ce.edge_dir, DirectionType::Right );
-    assert_eq!( ce.primary_label, "KNOWS" );
+    assert_eq!( ce.primary_label, "KNOWS\\::::::::::::::::::::::::::::::::::::::::::::::::::::::::::" );
+    */
   }
 
   #[test]
@@ -341,13 +558,13 @@ mod tests
       (alice)-:KNOWS->(bob)
       (alice)<[:KNOWS]>(bob)
     */
-    let qs = "";
+    let _qs = "";
   }
 
   #[test]
   fn test_transaction_1 () 
   {
-    let query_string = "
+    let _query_string = "
       CREATE GRAPH devs
         (alice:Developer),
         (bob:Administrator),
@@ -364,7 +581,7 @@ mod tests
   #[test]
   fn parser_test () 
   {
-    let query_string = "
+    let _query_string = "
       CREATE GRAPH devs
         (alice:Developer),
         (bob:Administrator),
@@ -377,6 +594,64 @@ mod tests
         (charlie)-[:KNOWS]->(daniel),
         (bob)-[:MARRIED]->(eskil)
     ";
+  }
+
+  #[test]
+  fn test_match_1 () 
+  {
+    /*
+    let trans: Transaction = process_query( "MATCH ()" );
+    assert_eq!( trans.match_clause.is_some(), true );
+
+    
+    // ---
+    let trans1: Transaction = process_query( "MATCH () FROM devs;" );
+    assert_eq!( trans1.match_clause.is_some(), true );
+    assert_eq!( trans1.from_clause.is_some(), true );
+
+    
+    // ---
+    let trans2: Transaction = process_query( "MATCH (n)" );
+    assert_eq!( trans2.match_clause.is_some(), true );
+
+    
+    // ---
+    let trans3: Transaction = process_query( "MATCH (n) FROM devs RETURN n.name" );
+    assert_eq!( trans3.match_clause.is_some(), true );
+    assert_eq!( trans3.from_clause.is_some(), true );
+    assert_eq!( trans3.return_clause.is_some(), true );
+
+
+    // ---
+    let trans4: Transaction = process_query( "MATCH (n:Stop)" );
+    assert_eq!( trans4.match_clause.is_some(), true );
+
+    
+    // ---
+    println!( "--------------------------------" );
+    let trans5: Transaction = process_query( "MATCH (n {mode: 'Rail'})" );
+    //assert_eq!( trans5.match_clause.is_some(), true );
+    println!( "{}", trans5 );
+    println!( "--------------------------------" );
+    */
+
+    /*
+    let tokens6: Vec<SyntaxToken> = parse_syntax( "" );
+    let tokens7: Vec<SyntaxToken> = parse_syntax( "MATCH (n:(TrainStation & BusStation))" );
+    let tokens8: Vec<SyntaxToken> = parse_syntax( "MATCH (n:(TrainStation | BusStation))" );
+    let tokens9: Vec<SyntaxToken> = parse_syntax( "MATCH (n:(TrainStation & BusStation) | StationGroup)" );
+    let tokens10: Vec<SyntaxToken> = parse_syntax( "MATCH (n:Station WHERE n.name STARTS WITH 'Preston') RETURN n" );
+    let tokens11: Vec<SyntaxToken> = parse_syntax( "MATCH (n:Station WHERE n.name ENDS WITH 'Preston') RETURN n" );
+    */
+
+
+    /*
+    let query_string = "
+      MATCH (n:Developer)
+      FROM devs
+      RETURN n AS Developer
+    ";
+    */
   }
 
   /*

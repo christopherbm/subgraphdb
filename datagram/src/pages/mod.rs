@@ -11,7 +11,7 @@ use crate::enums::{
   ROW_PREFIX_GRAPH_REF
 };
 use crate::structs::{ GraphRef };
-use crate::dg_utils::{ validate_dg_uuid, validate_dg_label, next_row_prefix, next_label };
+use crate::dg_utils::{ validate_dg_uuid, validate_dg_label };
 use crate::rows::{ sdb_config_page_start, sdb_config_page_end, sdb_config_graph_ref, empty_row };
 
 // SDB Config Page (Byte Interface)
@@ -45,7 +45,7 @@ impl SDBConfigPage
     let remaining_bytes = page_size - ( ret.len() + SDBCONFIG_PAGE_END_BYTES );
     ret.append( &mut empty_row( remaining_bytes / 8 ));
     
-    ret.append( &mut sdb_config_page_end( &self.build_id, &self.nickname ));
+    //ret.append( &mut sdb_config_page_end( &self.build_id, &self.nickname ));
     ret
   }
 
@@ -89,6 +89,7 @@ impl SDBConfigPage
     let mut n = 0;    
     while n < max_rows 
     {
+      /*
       let prefix_opt = next_row_prefix( f );
       if prefix_opt.is_some() 
       {
@@ -103,6 +104,7 @@ impl SDBConfigPage
           }
         }
       }
+        */
       n += 1;
     }
     Ok( false )

@@ -6,9 +6,43 @@ char Unicode scalar values like 'a', 'α' and '∞' (4 bytes each)
 bool either true or false
 */
 
+pub static BOOL_BYTES: usize = 8 as usize;
+pub static UUID_BYTES: usize = 40 as usize;
+pub static LABEL_BYTES: usize = 64 as usize; // names, labels, etc
+pub static U64_BYTES: usize = 8 as usize;
+pub static SHORT_STRING_BYTES: usize = 8 as usize;
+pub static ROW_AFFIX_BYTES: usize = 8 as usize;
+
+pub static TRUE_AFFIX: &'static str = "[::TRUE]";
+pub static FALSE_AFFIX: &'static str = "[:FALSE]";
+
+pub static DIR_UNDIRECTED: &'static str = "[:DIRUD]";
+pub static DIR_LEFT: &'static str = "[::DIRL]";
+pub static DIR_RIGHT: &'static str = "[::DIRR]";
+pub static DIR_BI: &'static str = "[:DIRBI]";
+
 /// Graph Edge Direction
 #[derive( Debug, Clone, PartialEq )]
 pub enum DirectionType { Undirected, Left, Right, Bidirectional }
+
+pub fn direction_to_str ( dt: &DirectionType ) -> &str 
+{
+  match dt 
+  {
+    DirectionType::Undirected => { return DIR_UNDIRECTED; },
+    DirectionType::Left => { return DIR_LEFT; },
+    DirectionType::Right => { return DIR_RIGHT; },
+    DirectionType::Bidirectional => { return DIR_BI; }
+  }
+}
+
+pub fn direction_from_str () {}
+
+pub fn bool_to_affix ( b: bool ) -> &'static str 
+{
+  if b == true { return TRUE_AFFIX; }
+  FALSE_AFFIX
+}
 
 /// Node / Edge Property
 #[derive( Debug, PartialEq )]

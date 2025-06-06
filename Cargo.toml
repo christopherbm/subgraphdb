@@ -1,7 +1,7 @@
 [package]
 name = "subgraphdb"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 common = { path = "./common" }
@@ -13,4 +13,4 @@ planner = { path = "./planner" }
 
 [workspace]
 members = [ "common", "sdb", "sdb_config", "cli", "datagram" , "graph", "api", "utils", "cmd", "planner", 
-"executor", "parser", "tokenize"]
+"executor", "parser", "tokenize", "datagramv2", "adjacency_matrix"]

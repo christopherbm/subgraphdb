@@ -1,102 +1,15 @@
-#[derive( Debug )]
-pub struct SyntaxNode 
-{
-  pub node_type: SyntaxNodeType,
-  pub tokens: Vec<SyntaxToken>,
-  pub children: Vec<SyntaxNode>,
-  pub is_open: bool,
-}
-impl SyntaxNode 
-{
-  pub fn new ( node_type: SyntaxNodeType ) -> SyntaxNode 
-  { 
-    SyntaxNode { node_type: node_type, tokens: Vec::new(), children: Vec::new(), is_open: true }
-  }
-
-  /// closes deepest node
-  pub fn close_node ( &mut self ) -> bool 
-  {
-    let mut prev: Option<&mut SyntaxNode> = None;
-    if self.children.len() > 0 
-    {
-      for node in self.children.iter_mut() { if node.is_open == true { prev = Some( node ); }}
-      
-      if prev.is_some() { return prev.unwrap().close_node(); }
-      else { return self.children[0].close_node(); }
-    }
-    else 
-    {
-      if self.is_open == true 
-      { 
-        self.is_open = false;
-        return true;
-      }
-    }
-
-    false
-  }
-
-  /// adds to deepest node
-  pub fn add_node ( &mut self, node: SyntaxNode ) -> bool
-  {
-    let mut prev: Option<&mut SyntaxNode> = None;
-    if self.children.len() > 0 
-    {
-      for node in self.children.iter_mut() { if node.is_open == true { prev = Some( node ); }}
-      
-      if prev.is_some() { return prev.unwrap().add_node( node ); }
-      else { return self.children[0].add_node( node ); }
-    }
-    else 
-    {
-      if self.is_open == true 
-      { 
-        self.children.push( node );
-        self.tokens.push( cons_syntax_token ( SyntaxTokenType::SyntaxNodeRef, String::from( "::REF" )));
-        return true;
-      }
-    }
-
-    false
-  }
-
-  /// adds to deepest node
-  pub fn add_token ( &mut self, token: SyntaxToken ) -> bool
-  {
-    let mut prev: Option<&mut SyntaxNode> = None;
-    if self.children.len() > 0 
-    {
-      for node in self.children.iter_mut() 
-      {
-        if node.is_open == true { prev = Some( node ); }
-      }
-      
-      if prev.is_some() { return prev.unwrap().add_token( token ); }
-      else { return self.children[0].add_token( token ); }
-    }
-    else 
-    {
-      if self.is_open == true 
-      { 
-        self.tokens.push( token ); 
-        return true;
-      }
-    }
-
-    false
-  }
-}
-
 #[derive( Debug, Clone )]
 pub struct SyntaxToken
 { 
   pub token_type: SyntaxTokenType,
   pub val: String,
 }
-
-pub fn cons_syntax_token ( token_type: SyntaxTokenType, val: String ) -> SyntaxToken 
+impl SyntaxToken 
 {
-  SyntaxToken { token_type: token_type, val: val }
+  pub fn new ( token_type: SyntaxTokenType, val: String ) -> SyntaxToken 
+  {
+    SyntaxToken { token_type: token_type, val: val }
+  }
 }
 
 #[derive( Debug, PartialEq, Clone )]

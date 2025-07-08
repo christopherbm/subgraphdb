@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 common = { path = "../common" }
-datagram = { path = "../datagram" }
+planner = { path = "../planner" }
 datagramv2 = { path = "../datagramv2" }
 utils = { path = "../utils" }
 cmd = { path = "../cmd" }

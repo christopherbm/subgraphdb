@@ -1,547 +1,450 @@
-use cmd::{ Transaction, CreateGraph, CreateNode, CreateEdge, CreateNodeRef, MatchClause, NodeRef, FromClause,
-  ReturnClause };
+use std::collections::VecDeque;
+use cmd::{ 
+  BracketStatement, CreateStatement, EdgeStatement, MatchStatement, NodeRefStatement, NodeStatement, ParenStatement, 
+  ReadClause };
+use cmd::transaction::Transaction;
+use common::DirectionType;
 use parser::{ parse_syntax };
-use tokenize::{ cons_syntax_token, SyntaxNode, SyntaxNodeType, SyntaxToken, SyntaxTokenType };
-use common::{ DirectionType, LABEL_BYTES };
-use utils::{ cons_uuid, process_str };
+use tokenize::{ SyntaxToken, SyntaxTokenType };
+use datagramv2::grams::{ Label, UUID };
+use utils::cons_uuid;
 
 /*
-CREATE movies
-    (keanu:Person {name:'Keanu Reeves', age:58, nationality:'Canadian'}),
-    (carrie:Person {name:'Carrie Anne Moss', age:55, nationality:'American'}),
-    (liam:Person {name:'Liam Neeson', age:70, nationality:'Northern Irish'}),
-    (guy:Person {name:'Guy Pearce', age:55, nationality:'Australian'}),
-    (kathryn:Person {name:'Kathryn Bigelow', age:71, nationality:'American'}),
-    (jessica:Person {name:'Jessica Chastain', age:45, address:''}),
-    (theMatrix:Movie {title:'The Matrix'}),
-    (keanu)-[:KNOWS]->(carrie),
-    (keanu)-[:KNOWS]->(liam),
-    (keanu)-[:KNOWS]->(kathryn),
-    (kathryn)-[:KNOWS]->(jessica),
-    (carrie)-[:KNOWS]->(guy),
-    (liam)-[:KNOWS]->(guy),
-    (keanu)-[:ACTED_IN]->(theMatrix),
-    (carrie)-[:ACTED_IN]->(theMatrix)
-
-
-<Transaction>
-  <DB is known and valid for this example. />
-  <CreateGraph uuid 0 name="movies" />
-  <InsertNode uuid 0 (keanu) Person IndexedProps {...} />
-  <InsertNode uuid 1 (carrie) Person IndexedProps {...} />
-  <InsertNode uuid 2 (liam) Person IndexedProps {...} />
-  <InsertNode uuid 3 (guy) Person IndexedProps {...} />
-  <InsertNode uuid 4 (kathryn) Person IndexedProps {...} />
-  <InsertNode uuid 5 (jessica) Person IndexedProps {...} />
-  <InsertNode uuid 6 (theMatrix) Movie IndexedProps {...} />
-
-  <InsertEdge uuid 0 (keanu) KNOWS (carrie) />
-  <InsertEdge uuid 1 (keanu) KNOWS (liam) />
-  <InsertEdge uuid 2 (keanu) KNOWS (kathryn) />
-  <InsertEdge uuid 3 (kathryn) KNOWS (jessica) />
-  <InsertEdge uuid 4 (carrie) KNOWS (guy) />
-  <InsertEdge uuid 5 (liam) KNOWS (guy) />
-  <InsertEdge uuid 6 (keanu) ACTED-IN (theMatrix) />
-  <InsertEdge uuid 7 (carrie) ACTED-IN (theMatrix) />
-  
-  <InsertNodeUnindexedProps {...} />
-</Transaction>
-
-
-
-----------------
-
 - For every N Transactions, a checkpoint transaction will be called that organizes the data.
 - Certain actions will force a checkpoint. These should be isolated, but still part of a transaction.
-
-MATCH (p:Person) FROM movies RETURN p LIMIT 5
-MATCH (p:Person) RETURN p LIMIT 5
-
+- reverse add things that can be closed and then reverse these on the way out
 */
-//pub fn create_sf_db () {}
-//pub fn init_sf_db () {}
 
-pub fn process_query_v2 ( query: &str ) -> Transaction 
-{
-  let syntax_node: SyntaxNode = collapse_tokens( parse_syntax( query ));
-  let mut transaction: Transaction = Transaction::new( 
-    String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8::::" ),
-    String::from( "devs\\:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::" ));
-
-  
-
-  transaction
-}
-
-fn collapse_tokens ( tokens: Vec<SyntaxToken> ) -> SyntaxNode
-{
-  let mut syntax_node = SyntaxNode::new( SyntaxNodeType::Root );
-  for token in tokens.into_iter() 
-  {
-    match token.token_type 
-    {
-      SyntaxTokenType::OpenNode => 
-      { 
-        syntax_node.add_node( SyntaxNode::new( SyntaxNodeType::Paren ));
-        syntax_node.add_token( token );
-      },
-      SyntaxTokenType::OpenBrace => 
-      { 
-        syntax_node.add_node( SyntaxNode::new( SyntaxNodeType::Brace ));
-        syntax_node.add_token( token );
-      },
-      SyntaxTokenType::OpenBracket => 
-      { 
-        syntax_node.add_node( SyntaxNode::new( SyntaxNodeType::Bracket )); 
-        syntax_node.add_token( token );
-      },
-
-      SyntaxTokenType::CloseNode |
-      SyntaxTokenType::CloseBrace |
-      SyntaxTokenType::CloseBracket => 
-      { 
-        syntax_node.add_token( token );
-        syntax_node.close_node(); 
-      },
-
-      _ => { syntax_node.add_token( token ); }
-    }
-  }
-  syntax_node
-}
-
-
-fn process_match_clause_v2 ( node: SyntaxNode, transaction: &mut Transaction ) 
-{
-  println!( "{:?}", node );
-}
 // ---------------------------------------------------------------------------------------------------------------------
 
-pub fn process_query ( query: &str ) -> Transaction
+pub fn process_query ( query: &str, build_id: UUID, nickname: Label ) -> Transaction 
 {
-  let tokens:Vec<SyntaxToken> = parse_syntax( query );  
-  let mut transaction: Transaction = Transaction::new( 
-    String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8::::" ),
-    String::from( "devs\\:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::" ));
-  let mut partial: Vec<SyntaxToken> = Vec::new();
-  for token in tokens.into_iter() 
+  let mut transaction_builder = TransactionBuilder::new(); 
+  let tokens = parse_syntax( query );
+  for token in tokens.into_iter() { transaction_builder.add_token( token ); }
+  
+  transaction_builder.close( build_id, nickname )
+}
+
+
+// ---------------------------------------------------------------------------------------------------------------------
+#[derive( Debug )]
+pub struct TransactionBuilder 
+{ 
+  pub current_order: u16,
+  pub err_state: Option<String>,
+
+  // create
+  pub create_statement: Option<CreateStatement>,
+
+  // nodes and edges
+  pub paren_statements: VecDeque<ParenStatement>,
+  pub bracket_statements: VecDeque<BracketStatement>,
+
+  // read clause
+  pub read_clause_order: Option<u16>,
+  pub match_statements: VecDeque<MatchStatement>
+}
+
+impl TransactionBuilder
+{
+  pub fn new () -> TransactionBuilder 
+  { 
+    TransactionBuilder 
+    { 
+      current_order: 0, 
+      err_state: None, 
+      
+      create_statement: None,
+
+      paren_statements: VecDeque::new(),
+      bracket_statements: VecDeque::new(),
+
+      read_clause_order: None, 
+      match_statements: VecDeque::new() 
+    }
+  }
+
+  pub fn close ( &mut self, build_id: UUID, nickname: Label ) -> Transaction 
   {
+    let mut transaction = Transaction::new( build_id, nickname, self.current_order );
+    
+    if self.create_statement.is_some() 
+    {
+      transaction.create_statement = Some( self.create_statement.as_ref().unwrap().clone() );
+    }
+
+    if self.match_statements.len() > 0 && self.read_clause_order.is_some()
+    {
+      let mut read_clause = ReadClause::new( self.read_clause_order.unwrap() );
+      while self.match_statements.len() > 0 
+      {
+        let stmt_opt = self.match_statements.pop_front();
+        if stmt_opt.is_some() { read_clause.add_match_statement( stmt_opt.unwrap() ); }
+      }
+      transaction.read_clause = Some( read_clause );
+    }
+
+    for paren in self.paren_statements.iter() 
+    {
+      if paren.is_ref() == true 
+      {
+        transaction.node_ref_statements.push( 
+          NodeRefStatement::new( 
+            paren.order, 
+            None, 
+            paren.transaction_label.clone().unwrap() ));   
+      }
+      else 
+      {
+        transaction.node_statements.push( 
+          NodeStatement::new( 
+            cons_uuid(), 
+            paren.order, 
+            paren.transaction_label.clone(), 
+            paren.primary_label.clone().unwrap() ));
+      }
+    }
+    
+    for bracket in self.bracket_statements.iter() 
+    {
+      transaction.edge_statements.push( 
+        EdgeStatement::new(
+          cons_uuid(), 
+          bracket.order, 
+          bracket.transaction_label.clone(), 
+          bracket.primary_label.clone().unwrap() ));
+    }
+
+    if self.err_state.is_some() { transaction.err_state = Some( self.err_state.as_ref().unwrap().clone() ); }
+    transaction
+  }
+}
+
+impl TransactionBuilder 
+{
+  pub fn close_statement ( &mut self, token: &SyntaxToken ) 
+  {
+    if self.create_statement.is_some() == true && self.create_statement.as_ref().unwrap().is_open == true
+    {
+      self.create_statement.as_mut().unwrap().is_open = false;
+      return;
+    }
+
+    let match_res = self.find_open_match_statement();
+    if match_res.is_some() 
+    {
+      self.match_statements.get_mut( match_res.unwrap() ).unwrap().is_open = false;
+      return;
+    }
+
+    let paren_res = self.find_open_paren_statement();
+    if paren_res.is_some() 
+    {
+      self.paren_statements.get_mut( paren_res.unwrap() ).unwrap().is_open = false;
+      return;
+    }
+
+    let bracket_res = self.find_open_bracket_statement();
+    if bracket_res.is_some() 
+    {
+      self.bracket_statements.get_mut( bracket_res.unwrap() ).unwrap().is_open = false;
+      return;
+    }
+
+    self.err_state = Some( String::from( "Syntax Error: Closing Statement" ));
+  }
+
+  pub fn add_token ( &mut self, token: SyntaxToken ) 
+  {
+    //println!( "{:?}", token );
+
     match token.token_type 
     {
-      SyntaxTokenType::OpenNode => 
-      {
-        if partial.len() > 0 
-        { 
-          if partial[0].token_type == SyntaxTokenType::KeywordMatch { partial.push( token ); }
-          else 
-          {
-            processs_partial( &mut transaction, partial );
-            partial = Vec::new();
-            partial.push( token );
-          }
-        }
-        else { partial.push( token ); }
-      },
-
-      SyntaxTokenType::CloseNode => 
-      {
-        partial.push( token );
-        processs_partial( &mut transaction, partial );
-        partial = Vec::new();
-
-        process_for_edge( &mut transaction );
-      },
-
-      SyntaxTokenType::CloseEdge => 
-      {
-        partial.push( token );
-        processs_partial( &mut transaction, partial );
-        partial = Vec::new();
-      },
-
+      SyntaxTokenType::KeywordMatch => { self.add_match_token( token ); },
+      SyntaxTokenType::KeywordCreate => { self.add_create( &token ); },
+      SyntaxTokenType::OpenNode => { self.add_open_node( &token ); },
+      SyntaxTokenType::CloseNode => { self.add_close_node( &token ); },
+      SyntaxTokenType::Label => { self.add_x_label( token ); },
+      SyntaxTokenType::PrimaryLabel => { self.add_x_label( token ); },
       SyntaxTokenType::EdgeDirection => 
       {
-        partial.push( token );
-        processs_partial( &mut transaction, partial );
-        partial = Vec::new();
+        if self.find_open_bracket_statement().is_some() { self.try_update_bracket_statements( &token ); }
+        else { self.add_bracket( &token ); }
       },
-
-      SyntaxTokenType::KeywordReturn => 
-      {
-        processs_partial( &mut transaction, partial );
-        partial = Vec::new();
-        partial.push( token );
-      },
-
-      _ => { partial.push( token ); }
+      _ => {}
     }
   }
 
-  if partial.len() > 0 
+  pub fn add_match_token ( &mut self, token: SyntaxToken ) 
   {
-    processs_partial( &mut transaction, partial );
-    partial = Vec::new();
-  }
-
-  transaction
-}
-
-fn processs_partial ( transaction: &mut Transaction, partial: Vec<SyntaxToken> )
-{
-  match partial[0].token_type 
-  {
-    SyntaxTokenType::KeywordCreate => { process_create_graph_partial( transaction, partial ); },
-
-    SyntaxTokenType::KeywordMatch => { process_match_clause( transaction, partial ); },
-
-    SyntaxTokenType::KeywordFrom => { process_from_clause( transaction, partial ); },
-
-    SyntaxTokenType::KeywordReturn => { process_return_clause( transaction, partial ); },
+    if token.token_type != SyntaxTokenType::KeywordMatch 
+    {
+      self.err_state = Some( String::from( "Syntax Error: Match Clause" ));
+      return;
+    }
     
-    SyntaxTokenType::OpenNode => { process_open_node_partial( transaction, partial ); },
-
-    SyntaxTokenType::OpenEdge => { process_open_edge_partial( transaction, partial ); },
-    
-    SyntaxTokenType::EdgeDirection => { process_edge_direction( transaction, partial ); },
-
-    _ => 
+    if self.read_clause_order.is_none() 
     { 
-      println!( "unmatched syntax token" );
-      println!( "{:?}", partial ); 
+      self.read_clause_order = Some( self.current_order );
+      self.current_order += 1;
     }
+    self.match_statements.push_back( MatchStatement::new( self.current_order, true, None, None, None ));
+    self.current_order += 1;
   }
-}
 
-/// !!! //transaction.err_state = Some( String::from( "Syntax Error: Create Graph" ));
-fn process_create_graph_partial ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
-{
-  if partial.len() == 3 
+  pub fn add_open_node ( &mut self, token: &SyntaxToken ) 
   { 
-    let str_res = process_str( LABEL_BYTES, partial[2].val.clone());
-    if str_res.is_ok() 
+    self.close_statement( token );
+
+    if token.token_type != SyntaxTokenType::OpenNode 
     {
-      transaction.graph_name = Some( str_res.as_ref().unwrap().clone() );
-      transaction.create_graph = Some( CreateGraph::new( cons_uuid(), str_res.unwrap() ));
+      self.err_state = Some( String::from( "Syntax Error: Open Paren" ));
+      return;
     }
-    else { println!( "error state" ); }
-    return;
-  }
-}
 
-fn process_open_node_partial ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
-{
-  if partial.len() == 3 
-  {
-    process_for_node_ref( transaction, partial );
-    return;
-  }
-
-  if partial.len() == 4 
-  {
-    let str_res = process_str( LABEL_BYTES, partial[2].val.clone());
-    if str_res.is_ok() 
-    {
-      transaction.create_node.push( CreateNode::new( cons_uuid(), partial[1].val.clone(), str_res.unwrap() ));
-    }
-    else { println!( "error state" ); }
-    return;
-  }
-
-  transaction.err_state = Some( String::from( "Syntax Error: Node" ));
-}
-
-fn process_open_edge_partial ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
-{
-  if partial.len() == 3 
-  {
-    transaction.edge_primary_label = Some( partial[1].val.clone() );
-    return;
-  }
-  transaction.err_state = Some( String::from( "Syntax Error: Edge" ));
-}
-
-fn process_edge_direction ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
-{
-  if partial.len() > 1 
-  {
-    transaction.err_state = Some( String::from( "Syntax Error: edge direction" ));
-    println!( "partial" );
-    return;
+    self.paren_statements.push_back( ParenStatement::new( self.current_order, true, None, None ));
+    self.current_order += 1; 
   }
   
-  let dir_res = process_direction_type( &partial[0].val );
-  if dir_res.is_ok() 
+  pub fn add_close_node ( &mut self, token: &SyntaxToken ) { self.close_statement( token ); }
+  
+  pub fn add_x_label ( &mut self, token: SyntaxToken ) 
   {
-    if transaction.edge_dir.is_none() 
+    if self.try_update_paren_statements( &token ) == true { return; }
+    if self.try_update_bracket_statements( &token ) == true { return; }
+    if self.try_update_match_statements( &token ) == true { return; }
+
+    if self.create_statement.is_some() && self.create_statement.as_ref().unwrap().is_open == true 
     {
-      transaction.edge_dir = Some( dir_res.unwrap() );
+      if token.token_type == SyntaxTokenType::Label 
+      {
+        let new_create = CreateStatement::from( &self.create_statement.as_ref().unwrap(), token );
+        if new_create.is_ok() 
+        {
+          self.create_statement = Some( new_create.unwrap() );
+          return;
+        }
+      }
+      self.err_state = Some( String::from( "Syntax Error: Create Statement Label" ));
       return;
     }
-    
-    let current_dir = transaction.edge_dir.as_ref().unwrap();
-    let new_dir = dir_res.as_ref().unwrap();
 
-    if *current_dir == DirectionType::Undirected && *new_dir == DirectionType::Undirected { return; }
-    
-    if *current_dir == DirectionType::Undirected && *new_dir == DirectionType::Right 
+    self.err_state = Some( String::from( "Syntax Error: Label" ));
+  }
+
+  pub fn add_create ( &mut self, _token: &SyntaxToken ) 
+  {
+    if self.create_statement.is_none() == true 
     {
-      transaction.edge_dir = Some( DirectionType::Right );
+      self.create_statement = Some( CreateStatement::new( self.current_order, None ));
+      self.current_order += 1;
       return;
     }
-
-    println!( "{:?} {:?}", current_dir, new_dir );
-  }
-  transaction.err_state = Some( String::from( "Syntax Error: edge direction" ));
-}
-
-fn process_direction_type ( dir: &str ) -> Result<DirectionType, String> 
-{
-  if dir == "-" { return Ok( DirectionType::Undirected ); }
-  if dir == "<" { return Ok( DirectionType::Left ); }
-  if dir == ">" { return Ok( DirectionType::Right ); }
-  Err( String::from( "Syntax Error: Edge Direction Type." ))
-}
-
-fn process_match_clause ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
-{
-  print!( "{:?}", partial );
-
-  if partial.len() == 3 
-  {
-    transaction.match_clause = Some( MatchClause::empty() );
-    return;
+    self.err_state = Some( String::from( "Syntax Error: Create" ));
   }
 
-  if partial.len() == 4 
+  pub fn add_bracket ( &mut self, token: &SyntaxToken ) 
   {
-    transaction.match_clause = Some( 
-        MatchClause::new( 
-          NodeRef::new( 
-            Some( partial[2].val.clone() ), 
-            None
-      )));
-    return;
+    self.bracket_statements.push_back( 
+      BracketStatement::new( self.current_order, true, None, None, TransactionBuilder::token_dir_type( token )));
+    self.current_order += 1;
   }
 
-  if partial.len() == 5 
+  pub fn try_update_paren_statements ( &mut self, token: &SyntaxToken ) -> bool 
   {
-    let str_res = process_str( LABEL_BYTES, partial[3].val.clone() );
-    if str_res.is_ok() 
+    let paren_res = self.find_open_paren_statement();
+    if paren_res.is_some() 
     {
-      transaction.match_clause = Some( 
-        MatchClause::new( 
-          NodeRef::new( 
-            Some( partial[2].val.clone() ), 
-            Some( str_res.unwrap() )
-      )));
+      let remove_res = self.paren_statements.remove( *paren_res.as_ref().unwrap() );
+      if remove_res.is_some() 
+      {
+        let replace_res = ParenStatement::from( remove_res.unwrap(), token );
+        if replace_res.is_ok() 
+        {
+          self.paren_statements.insert( *paren_res.as_ref().unwrap(), replace_res.unwrap() );
+          return true;
+        }
+      }
     }
-    else 
-    {
-      transaction.err_state = Some( String::from( "Syntax Error: Process Match Clause" ));
-    }
-    return;
-  }
-  transaction.err_state = Some( String::from( "Syntax Error: Process Match Clause" ));
-}
-
-fn process_from_clause ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
-{
-  if partial.len() == 2 
-  {
-    let str_res = process_str( LABEL_BYTES, partial[1].val.clone());
-    if str_res.is_ok() 
-    {
-      transaction.from_clause = Some( FromClause::new( str_res.unwrap() ));
-    }
-    else 
-    {
-      transaction.err_state = Some( String::from( "Syntax Error: Process From Clause" ));
-    }
-  }
-}
-
-fn process_return_clause ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
-{
-  if partial.len() == 2
-  {
-    transaction.return_clause = Some( 
-      ReturnClause::new( 
-        partial[1].val.clone(), 
-        None 
-    ));
-    return;
+    false
   }
 
-  if partial.len() == 4 
+  pub fn try_update_bracket_statements ( &mut self, token: &SyntaxToken ) -> bool 
   {
-    transaction.return_clause = Some( 
-      ReturnClause::new( 
-        partial[1].val.clone(), 
-        Some( partial[3].val.clone() ) 
-    ));
-    return;
+    let bracket_res = self.find_open_bracket_statement();
+    if bracket_res.is_some() 
+    {
+      let remove_res = self.bracket_statements.remove( *bracket_res.as_ref().unwrap() );
+      if remove_res.is_some() 
+      {
+        let replace_res = BracketStatement::from( remove_res.unwrap(), token );
+        if replace_res.is_ok() 
+        {
+          self.bracket_statements.insert( *bracket_res.as_ref().unwrap(), replace_res.unwrap() );
+          return true;
+        }
+      }
+    }
+    false
   }
   
-  transaction.err_state = Some( String::from( "Syntax Error: Return Clause" ));
+  pub fn try_update_match_statements ( &mut self, token: &SyntaxToken ) -> bool
+  {
+    let match_res = self.find_open_match_statement();
+    if match_res.is_some() 
+    {
+      let remove_res = self.match_statements.remove( *match_res.as_ref().unwrap() );
+      if remove_res.is_some() 
+      {
+        let replace_res = MatchStatement::from( remove_res.unwrap(), token );
+        if replace_res.is_ok() 
+        {
+          self.match_statements.insert( *match_res.as_ref().unwrap(), replace_res.unwrap() );
+          return true;
+        }
+      }
+    }
+    false
+  }
 }
 
-fn process_for_edge ( transaction: &mut Transaction ) 
+impl TransactionBuilder 
 {
-  if transaction.left_node_ref.is_some() 
-    && transaction.right_node_ref.is_some() 
-    && transaction.edge_primary_label.is_some()
-    && transaction.edge_dir.is_some()
+  pub fn find_open_match_statement ( &self ) -> Option<usize>
   {
-    let str_res = process_str( LABEL_BYTES, transaction.edge_primary_label.clone().unwrap() );
-    if str_res.is_ok() 
+    for ( i, stmt ) in self.match_statements.iter().enumerate()
     {
-      transaction.create_edge.push( 
-        CreateEdge::new( 
-          cons_uuid(),
-          transaction.left_node_ref.clone().unwrap(),
-          transaction.right_node_ref.clone().unwrap(),
-          transaction.edge_dir.clone().unwrap(),
-          str_res.unwrap() ));
-
-      transaction.left_node_ref = None; 
-      transaction.right_node_ref = None; 
-      transaction.edge_primary_label = None;
-      transaction.edge_dir = None;
+      if stmt.is_open == true 
+      {
+        return Some( i ); 
+      }
     }
-    else { println!( "error state" ); }
+    None
+  }
+
+  pub fn find_open_paren_statement ( &self ) -> Option<usize>
+  {
+    for ( i, stmt ) in self.paren_statements.iter().enumerate()
+    {
+      if stmt.is_open == true 
+      {
+        return Some( i ); 
+      }
+    }
+    None
+  }
+
+  pub fn find_open_bracket_statement ( &self ) -> Option<usize>
+  {
+    for ( i, stmt ) in self.bracket_statements.iter().enumerate()
+    {
+      if stmt.is_open == true { return Some( i ); }
+    }
+    None
+  }
+
+  pub fn token_dir_type ( token: &SyntaxToken ) -> DirectionType 
+  {
+    if token.token_type == SyntaxTokenType::EdgeDirection 
+    {
+      if token.val == "-" { return DirectionType::Bidirectional; }
+      if token.val == "<" { return DirectionType::Left; }
+      if token.val == ">" { return DirectionType::Right; }
+    }
+    DirectionType::Undirected
   }
 }
-
-fn process_for_node_ref ( transaction: &mut Transaction, partial: Vec<SyntaxToken> ) 
-{
-  if partial.len() != 3 
-  {
-    transaction.err_state = Some( String::from( "Syntax Error: Node Reference" ));
-    return;
-  }
-
-  let id_opt = transaction.find_id_by_transaction_label( &partial[1].val );
-  if id_opt.is_some() 
-  {
-    if transaction.left_node_ref.is_none() 
-    {
-      transaction.left_node_ref = Some( CreateNodeRef::new( id_opt.unwrap(), partial[1].val.clone() ));
-      return;
-    }
-    if transaction.right_node_ref.is_none() 
-    {
-      transaction.right_node_ref = Some( CreateNodeRef::new( id_opt.unwrap(), partial[1].val.clone() ));
-      return;
-    }
-  }
-
-  transaction.err_state = Some( String::from( "Syntax Error: Node Reference" ));
-  return;
-}
+// ---------------------------------------------------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests 
 {
   use super::*;
+  use common::LABEL_BYTES;
+
+  fn build_id () -> UUID { UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" )).unwrap() }
+  fn db_nickname () -> Label { Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() }
 
   #[test]
-  fn test_collapse_tokens () 
+  fn test_se1 () 
   {
-    let trans = process_query_v2( "MATCH ()" );
-    println!( "{}", trans );
-    //let trans:Transaction = process_query( "MATCH ()" );
-    //println!( "\n{}", trans );
+    let t = process_query( "MATCH ()", build_id(), db_nickname() );
+    assert_eq!( t.read_clause.is_some(), true );
+    assert_eq!( t.read_clause.as_ref().unwrap().order, 0 );
+    assert_eq!( t.read_clause.as_ref().unwrap().match_statements.len(), 1 );
+
+    let stmt_res = t.read_clause.as_ref().unwrap().match_statements.get( 0 );
+    assert_eq!( stmt_res.is_some(), true );
+    assert_eq!( stmt_res.as_ref().unwrap().order, 1 );
+    assert_eq!( stmt_res.as_ref().unwrap().is_open, false );
   }
 
   #[test]
-  fn test_create_graph () 
+  fn test_se2 () 
   {
-    /*
-    let query_string = "CREATE GRAPH devs";
-    let trans:Transaction = process_query( query_string );
-
-    assert_eq!( trans.create_graph.is_some(), true );
-    assert_eq!( trans.create_graph.unwrap().name, 
-      String::from( "devs\\:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::" ));
-    assert_eq!( trans.left_node_ref.is_none(), true );
-    assert_eq!( trans.right_node_ref.is_none(), true );
-    assert_eq!( trans.edge_dir.is_none(), true );
-    assert_eq!( trans.edge_primary_label.is_none(), true );
-    assert_eq!( trans.create_node.len(), 0 );
-    assert_eq!( trans.create_edge.len(), 0 );
-    assert_eq!( trans.err_state.is_some(), false );
-    */
-  }
-
-  #[test]
-  fn test_create_node () 
-  {
-    /*
     let query_string = "
-      (alice:Developer),
+      CREATE GRAPH devs
+        (alice:Developer)
+        (bob:Administrator)
+        (chris:Lead)
+        
+        (alice)-[:KNOWS]-(bob)
+        (alice)-[:KNOWS]-(chris)
+        (bob)-[:KNOWS]-(chris)
     ";
-    let trans:Transaction = process_query( query_string );
 
-    assert_eq!( trans.create_graph.is_none(), true );
-    assert_eq!( trans.create_node.len(), 1 );
-    assert_eq!( trans.create_node[0].transaction_label, String::from( "alice" ));
-    assert_eq!( trans.create_node[0].primary_label, 
-      String::from( "Developer\\::::::::::::::::::::::::::::::::::::::::::::::::::::::" ));
-    assert_eq!( trans.create_edge.len(), 0 );
+    let t = process_query( &query_string, build_id(), db_nickname() );
+    //println!( "{}", t );
 
-    // ---
-    
-    let query_string1 = "
-      (alice:Developer),
-      (bob:Administrator),
-      (charlie:Administrator),
-    ";
-    let trans1:Transaction = process_query( query_string1 );
-
-    assert_eq!( trans1.create_graph.is_none(), true );
-    assert_eq!( trans1.create_node.len(), 3 );
-    assert_eq!( trans1.create_node[0].transaction_label, String::from( "alice" ));
-    assert_eq!( trans1.create_node[0].primary_label, 
-      String::from( "Developer\\::::::::::::::::::::::::::::::::::::::::::::::::::::::" ));
-    assert_eq!( trans1.create_node[1].transaction_label, String::from( "bob" ));
-    assert_eq!( trans1.create_node[1].primary_label, 
-      String::from( "Administrator\\::::::::::::::::::::::::::::::::::::::::::::::::::" ));
-    assert_eq!( trans1.create_node[2].transaction_label, String::from( "charlie" ));
-    assert_eq!( trans1.create_node[2].primary_label, 
-      String::from( "Administrator\\::::::::::::::::::::::::::::::::::::::::::::::::::" ));
-    assert_eq!( trans1.create_edge.len(), 0 );
-    */
+    assert_eq!( t.create_statement.is_some(), true );
+    assert_eq!( t.node_statements.len(), 3 );
+    assert_eq!( t.node_ref_statements.len(), 6 );
+    assert_eq!( t.edge_statements.len(), 3 );
   }
 
   #[test]
-  fn test_create_edge () 
+  fn test_next_statements () 
   {
-    /* 
     let query_string = "
-      (alice:Developer),
-      (bob:Administrator),
-      (alice)-[:KNOWS]->(bob)
+      CREATE GRAPH devs
+        (alice:Developer)
+        (bob:Administrator)
+        (chris:Lead)
+        
+        (alice)-[:KNOWS]-(bob)
+        (alice)-[:KNOWS]-(chris)
+        (bob)-[:KNOWS]-(chris)
     ";
 
-    //println!( "--------------------------------" );
-    let trans:Transaction = process_query( query_string );
-    //println!( "{}", trans );
-    //println!( "--------------------------------" );
+    let t = process_query( &query_string, build_id(), db_nickname() );
+    println!( "{}", t );
 
-    assert_eq!( trans.create_graph.is_none(), true );
-    assert_eq!( trans.left_node_ref.is_none(), true );
-    assert_eq!( trans.right_node_ref.is_none(), true );
-    assert_eq!( trans.edge_primary_label.is_none(), true );
-    assert_eq!( trans.edge_dir.is_none(), true );
-    assert_eq!( trans.create_edge.len(), 1 );
-    assert_eq!( trans.err_state.is_none(), true );
+    assert_eq!( t.create_statement.is_some(), true );
+    assert_eq!( t.node_statements.len(), 3 );
+    assert_eq!( t.node_ref_statements.len(), 6 );
+    assert_eq!( t.edge_statements.len(), 3 );
 
-    let ce = &trans.create_edge[0];
-    assert_eq!( ce.left_ref.transaction_label, "alice" );
-    assert_eq!( ce.right_ref.transaction_label, "bob" );
-    assert_eq!( ce.edge_dir, DirectionType::Right );
-    assert_eq!( ce.primary_label, "KNOWS\\::::::::::::::::::::::::::::::::::::::::::::::::::::::::::" );
-    */
+    assert_eq!( t.next_node_statement( 1 ).is_some(), true );
+    assert_eq!( t.next_node_statement( 2 ).is_some(), true );
+    assert_eq!( t.next_node_statement( 3 ).is_some(), true );
+
+    assert_eq!( t.next_node_statement( 4 ).is_some(), false );
+    assert_eq!( t.next_edge_statement( 4 ).is_some(), false );
+
+    assert_eq!( t.next_ref_statement( 4 ).is_some(), true );
+    assert_eq!( t.next_edge_statement( 5 ).is_some(), true );
+    assert_eq!( t.next_ref_statement( 6 ).is_some(), true );
+
+    assert_eq!( t.next_ref_statement( 7 ).is_some(), true );
+    assert_eq!( t.next_edge_statement( 8 ).is_some(), true );
+    assert_eq!( t.next_ref_statement( 9 ).is_some(), true );
+
+    assert_eq!( t.next_ref_statement( 10 ).is_some(), true );
+    assert_eq!( t.next_edge_statement( 11 ).is_some(), true );
+    assert_eq!( t.next_ref_statement( 12 ).is_some(), true );
+
+    assert_eq!( t.query_order, 13 );
   }
 
   #[test]
@@ -560,125 +463,4 @@ mod tests
     */
     let _qs = "";
   }
-
-  #[test]
-  fn test_transaction_1 () 
-  {
-    let _query_string = "
-      CREATE GRAPH devs
-        (alice:Developer),
-        (bob:Administrator),
-        (alice)-[:KNOWS]->(bob)
-    ";
-    
-    //println!( "------------------------------------------------------" );
-    //let trans: Transaction = process_query( query_string );
-    //println!( "{}", trans );
-    //println!( "------------------------------------------------------" );
-
-  }
-
-  #[test]
-  fn parser_test () 
-  {
-    let _query_string = "
-      CREATE GRAPH devs
-        (alice:Developer),
-        (bob:Administrator),
-        (charlie:Administrator),
-        (daniel:Adminstrator),
-        (eskil:Designer),
-        (alice)-[:KNOWS]->(bob),
-        (alice)-[:KNOWS]->(charlie),
-        (bob)-[:KNOWS]->(daniel),
-        (charlie)-[:KNOWS]->(daniel),
-        (bob)-[:MARRIED]->(eskil)
-    ";
-  }
-
-  #[test]
-  fn test_match_1 () 
-  {
-    /*
-    let trans: Transaction = process_query( "MATCH ()" );
-    assert_eq!( trans.match_clause.is_some(), true );
-
-    
-    // ---
-    let trans1: Transaction = process_query( "MATCH () FROM devs;" );
-    assert_eq!( trans1.match_clause.is_some(), true );
-    assert_eq!( trans1.from_clause.is_some(), true );
-
-    
-    // ---
-    let trans2: Transaction = process_query( "MATCH (n)" );
-    assert_eq!( trans2.match_clause.is_some(), true );
-
-    
-    // ---
-    let trans3: Transaction = process_query( "MATCH (n) FROM devs RETURN n.name" );
-    assert_eq!( trans3.match_clause.is_some(), true );
-    assert_eq!( trans3.from_clause.is_some(), true );
-    assert_eq!( trans3.return_clause.is_some(), true );
-
-
-    // ---
-    let trans4: Transaction = process_query( "MATCH (n:Stop)" );
-    assert_eq!( trans4.match_clause.is_some(), true );
-
-    
-    // ---
-    println!( "--------------------------------" );
-    let trans5: Transaction = process_query( "MATCH (n {mode: 'Rail'})" );
-    //assert_eq!( trans5.match_clause.is_some(), true );
-    println!( "{}", trans5 );
-    println!( "--------------------------------" );
-    */
-
-    /*
-    let tokens6: Vec<SyntaxToken> = parse_syntax( "" );
-    let tokens7: Vec<SyntaxToken> = parse_syntax( "MATCH (n:(TrainStation & BusStation))" );
-    let tokens8: Vec<SyntaxToken> = parse_syntax( "MATCH (n:(TrainStation | BusStation))" );
-    let tokens9: Vec<SyntaxToken> = parse_syntax( "MATCH (n:(TrainStation & BusStation) | StationGroup)" );
-    let tokens10: Vec<SyntaxToken> = parse_syntax( "MATCH (n:Station WHERE n.name STARTS WITH 'Preston') RETURN n" );
-    let tokens11: Vec<SyntaxToken> = parse_syntax( "MATCH (n:Station WHERE n.name ENDS WITH 'Preston') RETURN n" );
-    */
-
-
-    /*
-    let query_string = "
-      MATCH (n:Developer)
-      FROM devs
-      RETURN n AS Developer
-    ";
-    */
-  }
-
-  /*
-  #[test]
-  fn parser_test_1 () 
-  {
-    let query_string = "
-      CREATE devs
-        (alice:Developer {name:'Alice', age: 38, eyes: 'Brown'}),
-        (bob:Administrator {name: 'Bob', age: 25, eyes: 'Blue'}),
-        (charlie:Administrator {name: 'Charlie', age: 53, eyes: 'Green'}),
-        (daniel:Adminstrator {name: 'Daniel', age: 54, eyes: 'Brown'}),
-        (eskil:Designer {name: 'Eskil', age: 41, eyes: 'blue', likedColors: ['Pink', 'Yellow', 'Black']}),
-        (alice)-[:KNOWS]->(bob),
-        (alice)-[:KNOWS]->(charlie),
-        (bob)-[:KNOWS]->(daniel),
-        (charlie)-[:KNOWS]->(daniel),
-        (bob)-[:MARRIED]->(eskil)
-    ";
-
-    //let tokens:Vec<SyntaxToken> = parse_syntax( query_string );
-    //println!( "{:?}", tokens );
-
-    //for token in tokens.iter() 
-    //{
-    //  println!( "{:?}", token );
-    //}
-  }
-  */
 }

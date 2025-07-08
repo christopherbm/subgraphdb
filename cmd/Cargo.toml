@@ -7,3 +7,4 @@ edition = "2024"
 common = { path = "../common" }
 utils = { path = "../utils" }
 tokenize = { path = "../tokenize" }
+datagramv2 = { path = "../datagramv2" }

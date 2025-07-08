@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
-use sdb::single_file::{ init_sf_db };
+//use sdb::single_file::{ init_sf_db };
 use cli::{ ArgOneAction, ArgTwoAction, ArgThreeAction, check_first_arg, check_second_arg, check_third_arg };
-use fdm::{ path_exists };
+//use fdm::{ path_exists };
 
 /*
   cargo run -- /platonic3d/subgraphdbv2/test_data/sf/test1.sdb
@@ -29,13 +29,13 @@ fn main()
     ArgOneAction::InteractiveMode => println!( "interactive mode" ),
     ArgOneAction::CheckFilePath => 
     {
-      let file_exists = path_exists( PathBuf::from( std::env::args().nth( 1 ).unwrap() ));
-      if file_exists.is_ok() { input_path_exists = file_exists.unwrap(); }
+      //let file_exists = path_exists( PathBuf::from( std::env::args().nth( 1 ).unwrap() ));
+      //if file_exists.is_ok() { input_path_exists = file_exists.unwrap(); }
     },
     ArgOneAction::CheckDirPath => 
     {
-      let dir_exists = path_exists( PathBuf::from( std::env::args().nth( 1 ).unwrap() ));
-      if dir_exists.is_ok() { input_path_exists = dir_exists.unwrap(); }
+      //let dir_exists = path_exists( PathBuf::from( std::env::args().nth( 1 ).unwrap() ));
+      //if dir_exists.is_ok() { input_path_exists = dir_exists.unwrap(); }
     }
     ArgOneAction::CreateNewFile => create_mode = true,
   }
@@ -57,7 +57,7 @@ fn main()
   {
     if init_sf 
     {
-      init_sf_db( BUILD_UUID, PathBuf::from( std::env::args().nth( 1 ).unwrap() ), nickname );
+      //init_sf_db( BUILD_UUID, PathBuf::from( std::env::args().nth( 1 ).unwrap() ), nickname );
     }
   }
 

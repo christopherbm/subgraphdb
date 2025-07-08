@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use fdm::{ is_file, is_dir, has_file_extension };
+//use fdm::{ is_file, is_dir, has_file_extension };
 
 static ARG_NOT_FOUND: &'static str = "::arg_not_found";
 static SHOW_FULL_HELP: &'static str = "::show_full_help";
@@ -83,9 +83,9 @@ pub fn check_first_arg ( arg_opt: Option<String> ) -> ArgOneAction
     let path = PathBuf::from( arg );
     
     // existing file or path
-    if is_file( &path ) { return ArgOneAction::CheckFilePath }
-    if is_dir( &path ) { return ArgOneAction::CheckDirPath }
-    if has_file_extension( &path ) { return ArgOneAction::CreateNewFile }
+    //if is_file( &path ) { return ArgOneAction::CheckFilePath }
+    //if is_dir( &path ) { return ArgOneAction::CheckDirPath }
+    //if has_file_extension( &path ) { return ArgOneAction::CreateNewFile }
   }
   ArgOneAction::ArgNotFound
 }

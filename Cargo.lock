@@ -37,6 +37,7 @@ name = "cmd"
 version = "0.1.0"
 dependencies = [
  "common",
+ "datagramv2",
  "tokenize",
  "utils",
 ]
@@ -66,7 +67,6 @@ version = "0.1.0"
 dependencies = [
  "cmd",
  "common",
- "datagram",
  "datagramv2",
  "planner",
  "utils",
@@ -119,7 +119,7 @@ checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 
 [[package]]
 name = "parser"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cmd",
  "tokenize",
@@ -131,6 +131,7 @@ version = "0.1.0"
 dependencies = [
  "cmd",
  "common",
+ "datagramv2",
  "parser",
  "tokenize",
  "utils",
@@ -159,6 +160,10 @@ name = "r-efi"
 version = "5.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74765f6d916ee2faa39bc8e68e4f3ed8949b48cccdac59983d287a7cb71ce9c5"
+
+[[package]]
+name = "result"
+version = "0.1.0"
 
 [[package]]
 name = "rustversion"

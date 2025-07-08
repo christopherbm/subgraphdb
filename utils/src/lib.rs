@@ -1,16 +1,13 @@
+pub mod test_utils;
+
 use std::string::{ FromUtf8Error };
 use std::path::PathBuf;
-use std::fs::{ File, exists };
+use std::fs::{ exists, File, OpenOptions };
 use std::io::Error;
 use uuid::Uuid;
 
 // padded
-pub fn cons_uuid () -> String 
-{
-  let mut ret: String = String::from( Uuid::new_v4().to_string() );
-  ret.push_str( "::::" );
-  ret
-}
+pub fn cons_uuid () -> String { String::from( Uuid::new_v4().to_string() )}
 
 /// Convert Byte Array into String
 pub fn str_from_bytes ( bytes: &[u8] ) -> Result<String, FromUtf8Error> 
@@ -25,7 +22,7 @@ pub fn str_to_bytes ( s: String ) -> Vec<u8>
 }
 
 /// Generate padding string of given length
-fn gen_pad_str ( length: usize ) -> String 
+pub fn gen_pad_str ( length: usize ) -> String 
 {
   if length == 0 { return String::from( "" )}
 
@@ -94,7 +91,10 @@ pub fn has_file_extension ( path: &PathBuf ) -> bool
 pub fn create_file ( path: &PathBuf ) -> Result<File, Error> { File::create( path ) }
 
 /// Open File
-pub fn open_file ( path: &PathBuf ) -> Result<File, Error> { File::open( path ) }
+pub fn open_file ( path: &PathBuf ) -> Result<File, Error> 
+{
+  OpenOptions::new().read( true ).write( true ).create( false ).open( path )
+}
 
 /// Check Path/File exists
 pub fn path_exists ( path: PathBuf ) -> Result<bool, Error> { exists( path ) }

@@ -8,6 +8,7 @@ bool either true or false
 
 pub static BOOL_BYTES: usize = 8 as usize;
 pub static UUID_BYTES: usize = 40 as usize;
+pub static RAW_UUID_BYTES: usize = 36 as usize;
 pub static LABEL_BYTES: usize = 64 as usize; // names, labels, etc
 pub static U64_BYTES: usize = 8 as usize;
 pub static SHORT_STRING_BYTES: usize = 8 as usize;
@@ -20,6 +21,9 @@ pub static DIR_UNDIRECTED: &'static str = "[:DIRUD]";
 pub static DIR_LEFT: &'static str = "[::DIRL]";
 pub static DIR_RIGHT: &'static str = "[::DIRR]";
 pub static DIR_BI: &'static str = "[:DIRBI]";
+
+pub static PLACEHOLDER: &'static str = "[::PLCH]";
+pub static END_DB: &'static str = "[:::END]";
 
 /// Graph Edge Direction
 #[derive( Debug, Clone, PartialEq )]
@@ -43,6 +47,15 @@ pub fn bool_to_affix ( b: bool ) -> &'static str
   if b == true { return TRUE_AFFIX; }
   FALSE_AFFIX
 }
+
+#[derive( Debug )]
+pub struct KeyValString
+{
+  pub order: u16,
+  pub key: String,
+  pub val: String,
+}
+
 
 /// Node / Edge Property
 #[derive( Debug, PartialEq )]

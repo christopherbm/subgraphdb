@@ -166,6 +166,12 @@ impl ParenStatement
   }
 
   pub fn is_ref ( &self ) -> bool { self.primary_label.is_none() }
+
+  pub fn is_empty ( &self ) -> bool 
+  {
+    if self.primary_label.is_none() && self.transaction_label.is_none() { return true; }
+    false
+  }
   
   pub fn to_node_statement ( &self ) -> Result<NodeStatement, String>
   {

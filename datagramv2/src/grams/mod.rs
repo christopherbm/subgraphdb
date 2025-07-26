@@ -1,4 +1,4 @@
-use utils::{ gen_pad_str };
+use utils::{ gen_pad_str, cons_uuid };
 use common::{ RAW_UUID_BYTES };
 
 #[derive( Debug, Clone )]
@@ -41,6 +41,8 @@ impl UUID
     }
     Err( String::from( "Error creating UUID" ))
   }
+
+  pub fn generate () -> UUID { UUID::new( cons_uuid() ).unwrap() }
 
   /// Creates padded version of uuid
   pub fn unwrap ( &self ) -> String { self.val.clone() + "::::" }

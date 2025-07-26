@@ -1,12 +1,29 @@
-use std::{ fs::File, io::{BufWriter, SeekFrom}, path::PathBuf };
+use std::fs::File;
+use std::io::BufWriter;
+use std::path::PathBuf;
 
-use cmd::{transaction::Transaction, EdgeStatement, NodeRefStatement, NodeStatement};
-use common::{direction_to_str, DirectionType, LABEL_BYTES};
-use datagramv2::{grams::{ DGu64, Label, UUID }, rows::PageRow};
+use cmd::{ transaction::Transaction, EdgeStatement, NodeStatement };
+use common::{ direction_to_str, DirectionType, LABEL_BYTES };
+use datagramv2::grams::{ DGu64, Label, UUID };
 use utils::{ cons_uuid, open_file };
 
-use crate::{ core::CoreExecutor, core_planner::WriteNewGraphPlanner, writer::core::{CoreWriteExecutor, PageWriteResult} };
+use crate::core::CoreExecutor;
+use crate::core_planner::WriteNewGraphPlanner;
+use crate::writer::core::{ CoreWriteExecutor, PageWriteResult };
 
+/* 
+  WriteNewGraphExecutor
+    :: new()
+    :: execute()
+        :: set_graph_name_uuid()
+            :: find_graph_name()
+        :: write()
+            :: write_graph()
+            :: write_data_page()
+            :: write_node()
+            :: write_edge()
+            :: validate_edge_statement()
+*/
 pub struct WriteNewGraphExecutor<'a> 
 {
   pub transaction: &'a Transaction,
@@ -181,6 +198,8 @@ impl WriteNewGraphExecutor<'_>
 
 impl WriteNewGraphExecutor<'_> 
 {
+
+  /// Find new graph name within Transaction
   pub fn find_graph_name ( &self ) -> Option<String>
   {
     if self.transaction.create_statement.is_some() 
@@ -237,6 +256,167 @@ mod tests
     let _ = WriteNewDBExecutor::execute_write_new( &build_id(), &db_nickname(), PAGE_SIZE, &mut stream );
   }
 
+  #[test]
+  fn test_find_graph_name () 
+  {
+    let path_str = "../test_data/find_graph_name.sdb";    
+    let query_string = "CREATE GRAPH devs";
+    let t = process_query( &query_string, build_id(), db_nickname() );
+    let writer = WriteNewGraphExecutor::new( &t, path_str, 4096 );
+
+    assert_eq!( writer.find_graph_name(), Some( String::from("devs")));
+  }
+
+  #[test]
+  fn test_write_graph () 
+  {
+    let path_str = "../test_data/WriteNewGraphExecutor_test_write_graph.sdb";
+    write_new_db( path_str );
+    assert_eq!( metadata( &PathBuf::from( path_str ) ).unwrap().len(), 4096 as u64 );
+    
+    let query_string = "CREATE GRAPH devs";
+    let t = process_query( &query_string, build_id(), db_nickname() );
+    let mut write_executor = WriteNewGraphExecutor::new( &t, path_str, 4096 );
+    
+    write_executor.graph_name = Some( Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() );
+    write_executor.graph_uuid = Some( UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0cX" )).unwrap() );
+
+    let name_label = Label::new( String::from( "devs2" ), LABEL_BYTES );
+    let mut planner = WriteNewGraphPlanner::new( path_str.to_string(), name_label.as_ref().unwrap() );
+    planner.plan();
+
+    let open_res = open_file( &PathBuf::from( &path_str ));
+    let mut writer: BufWriter<File> = BufWriter::new( open_res.unwrap() );
+
+    write_executor.write_graph( &planner, &mut writer );
+
+    assert_eq!( write_executor.err_state, None );
+
+    let _ = remove_file( PathBuf::from( path_str ));
+  }
+  
+  #[test]
+  fn test_write_data_page () 
+  {
+    let path_str = "../test_data/WriteNewGraphExecutor_test_write_data_page.sdb";
+    write_new_db( path_str );
+    assert_eq!( metadata( &PathBuf::from( path_str ) ).unwrap().len(), 4096 as u64 );
+    
+    let query_string = "CREATE GRAPH devs";
+    let t = process_query( &query_string, build_id(), db_nickname() );
+    let mut write_executor = WriteNewGraphExecutor::new( &t, path_str, 4096 );
+    
+    write_executor.graph_name = Some( Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() );
+    write_executor.graph_uuid = Some( UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0cX" )).unwrap() );
+
+    let name_label = Label::new( String::from( "devs2" ), LABEL_BYTES );
+    let mut planner = WriteNewGraphPlanner::new( path_str.to_string(), name_label.as_ref().unwrap() );
+    planner.plan();
+
+    let open_res = open_file( &PathBuf::from( &path_str ));
+    let mut writer: BufWriter<File> = BufWriter::new( open_res.unwrap() );
+
+    let res = write_executor.write_data_page( &planner, &mut writer );
+
+    assert_eq!( write_executor.err_state, None );    
+    assert_eq!( res.is_ok(), true );
+    assert_eq!( res.as_ref().unwrap().empty_cell_count, 494 );
+    assert_eq!( res.as_ref().unwrap().position_start_empty, 4224 );
+    assert_eq!( res.as_ref().unwrap().err_state, None );
+
+    let _ = remove_file( PathBuf::from( path_str ));
+  }
+
+  #[test]
+  fn test_write_node () 
+  {
+    let path_str = "../test_data/WriteNewGraphExecutor_test_write_node.sdb";
+    write_new_db( path_str );
+    assert_eq!( metadata( &PathBuf::from( path_str ) ).unwrap().len(), 4096 as u64 );
+    
+    let query_string = "CREATE GRAPH devs";
+    let t = process_query( &query_string, build_id(), db_nickname() );
+    let mut write_executor = WriteNewGraphExecutor::new( &t, path_str, 4096 );
+    
+    write_executor.graph_name = Some( Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() );
+    write_executor.graph_uuid = Some( UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0cX" )).unwrap() );
+
+    let stmt = NodeStatement::new( 
+      String::from( "67e55044-10b1-426f-9247-bb680e5fe0cX" ), 
+      0, 
+      None, 
+      String::from( "primary" ));
+
+    let open_res = open_file( &PathBuf::from( &path_str ));
+    let mut writer: BufWriter<File> = BufWriter::new( open_res.unwrap() );
+
+    let _ = write_executor.write_node( &stmt, 0, &mut writer );
+
+    assert_eq!( write_executor.err_state, None );
+
+    let _ = remove_file( PathBuf::from( path_str ));
+  }
+
+  #[test]
+  fn test_write_edge () 
+  {
+    let path_str = "../test_data/WriteNewGraphExecutor_test_write_edge.sdb";
+    write_new_db( path_str );
+    assert_eq!( metadata( &PathBuf::from( path_str ) ).unwrap().len(), 4096 as u64 );
+    
+    let query_string = "CREATE GRAPH devs";
+    let t = process_query( &query_string, build_id(), db_nickname() );
+    let mut write_executor = WriteNewGraphExecutor::new( &t, path_str, 4096 );
+    
+    write_executor.graph_name = Some( Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() );
+    write_executor.graph_uuid = Some( UUID::new( String::from( cons_uuid() )).unwrap() );
+
+    let stmt = EdgeStatement::new( String::from( cons_uuid() ), 0, None, String::from( "primary" ));
+
+    let open_res = open_file( &PathBuf::from( &path_str ));
+    let mut writer: BufWriter<File> = BufWriter::new( open_res.unwrap() );
+
+    let _ = write_executor.write_edge( 
+      &UUID::generate(), 
+      &stmt, 
+      &UUID::generate(),
+      DirectionType::Undirected,
+      0,
+      &mut writer );
+
+    assert_eq!( write_executor.err_state, None );
+
+    let _ = remove_file( PathBuf::from( path_str ));
+  }
+
+  #[test]
+  fn test_validate_edge_statement () 
+  {
+    let path_str = "../test_data/WriteNewGraphExecutor_test_validate_edge_statement.sdb";
+    write_new_db( path_str );
+    assert_eq!( metadata( &PathBuf::from( path_str ) ).unwrap().len(), 4096 as u64 );
+    
+    let query_string = "
+      CREATE GRAPH devs
+        (alice:Developer)
+        (bob:Administrator)
+        (chris:Lead)
+        (alice)-[:KNOWS]-(bob)
+        (alice)-[:KNOWS]-(chris)
+        (bob)-[:KNOWS]-(chris)
+    ";
+    let t = process_query( &query_string, build_id(), db_nickname() );
+    let writer = WriteNewGraphExecutor::new( &t, path_str, 4096 );
+    let res = writer.validate_edge_statement( t.edge_statements.get( 0 ).as_ref().unwrap(), 5 );
+
+    assert_eq!( res.is_some(), true );
+    assert_eq!( res.as_ref().unwrap().0.val, t.node_statements.get( 0 ).as_ref().unwrap().id );
+    assert_eq!( res.as_ref().unwrap().1.val, t.node_statements.get( 1 ).as_ref().unwrap().id );
+    
+    let _ = remove_file( PathBuf::from( path_str ));
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------
   #[test]
   fn test_create_graph_2 () 
   {

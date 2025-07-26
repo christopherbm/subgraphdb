@@ -4,6 +4,8 @@
 Returns all nodes in default graph.
 ```
 MATCH ()
+
+MATCH (n)
 ```
 
 
@@ -19,6 +21,52 @@ CREATE GRAPH devs
   (bob)-[:KNOWS]-(chris)
 ```
 
+
+### SE 3
+Returns all nodes from given graph.
+```
+MATCH () FROM devs;
+```
+
+
+### SE 4
+Match all nodes from given graph but return only given property.
+```
+MATCH (n) FROM devs RETURN n.name
+```
+
+
+### SE 5
+Match all nodes from default graph with the given primary label.
+```
+MATCH (n:Stop)
+
+MATCH (n:Developer)
+```
+
+
+### SE 6
+Match all nodes from given graph with the given primary label. Return with custom label.
+```
+MATCH (n:Developer)
+FROM devs
+RETURN n AS Developer
+```
+
+
+### SE 7
+Match a specific node (or nodes) from default graph. Set new property value.
+```
+MATCH (p:Person {name: 'Jennifer'})
+SET p.birthdate = date('1980-01-01')
+RETURN p
+```
+
+
+
+
+
+
 ### 
 ```
 CREATE
@@ -30,7 +78,7 @@ CREATE
 ```
 
 ```
-MATCH (n:Developer)
+
 MATCH (n { mode: 'Rail' })
 
 MATCH (john:Person {name: 'John'})

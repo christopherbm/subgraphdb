@@ -13,14 +13,3 @@ pub mod core_planner;
 - When a read begins, it chooses a particular transaction id to be its "end mark". This way reads can happen along with
   writes but the reads will have "point-in-time" consistency.
 */
-
-pub struct Executor
-{
-}
-impl Executor
-{
-  pub fn new () -> Executor
-  {
-    Executor {}
-  } 
-}

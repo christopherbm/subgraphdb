@@ -28,6 +28,29 @@ pub fn process_query ( query: &str, build_id: UUID, nickname: Label ) -> Transac
 
 
 // ---------------------------------------------------------------------------------------------------------------------
+/* 
+  TransactionBuilder
+    :: new()
+    :: close()
+    :: add_token()
+        :: add_match_token()
+        :: add_create()
+        :: add_open_node()
+          :: close_statement()
+        :: add_close_node()
+        :: add_x_label()
+            :: try_update_paren_statements()
+            :: try_update_bracket_statements()
+            :: try_update_match_statements()
+        :: find_open_bracket_statement()
+        :: try_update_bracket_statements()
+        :: add_bracket()
+
+    :: close_statement()
+        :: find_open_match_statement()
+        :: find_open_paren_statement()
+        :: find_open_bracket_statement
+*/
 #[derive( Debug )]
 pub struct TransactionBuilder 
 { 
@@ -119,11 +142,59 @@ impl TransactionBuilder
     if self.err_state.is_some() { transaction.err_state = Some( self.err_state.as_ref().unwrap().clone() ); }
     transaction
   }
+
+  pub fn add_token ( &mut self, token: SyntaxToken ) 
+  {
+    match token.token_type 
+    {
+      SyntaxTokenType::KeywordMatch => { self.add_match_token(); },
+      SyntaxTokenType::KeywordCreate => { self.add_create_token(); },
+      SyntaxTokenType::OpenNode => { self.add_open_node(); },
+      SyntaxTokenType::CloseNode => { self.add_close_node(); },
+      SyntaxTokenType::Label => { self.add_x_label( token ); },
+      SyntaxTokenType::PrimaryLabel => { self.add_x_label( token ); },
+      SyntaxTokenType::EdgeDirection => 
+      {
+        if self.find_open_bracket_statement().is_some() { self.try_update_bracket_statements( &token ); }
+        else { self.add_bracket( &token ); }
+      },
+      _ => {}
+    }
+  }
 }
 
 impl TransactionBuilder 
 {
-  pub fn close_statement ( &mut self, token: &SyntaxToken ) 
+  pub fn add_match_token ( &mut self ) 
+  {
+    if self.read_clause_order.is_none() 
+    { 
+      self.read_clause_order = Some( self.current_order );
+      self.current_order += 1;
+    }
+    self.match_statements.push_back( MatchStatement::new( self.current_order, true, None, None, None ));
+    self.current_order += 1;
+  }
+
+  pub fn add_create_token ( &mut self ) 
+  {
+    if self.create_statement.is_none() == true 
+    {
+      self.create_statement = Some( CreateStatement::new( self.current_order, None ));
+      self.current_order += 1;
+      return;
+    }
+    self.err_state = Some( String::from( "Syntax Error: Create" ));
+  }
+
+  pub fn add_open_node ( &mut self ) 
+  { 
+    self.close_statement();
+    self.paren_statements.push_back( ParenStatement::new( self.current_order, true, None, None ));
+    self.current_order += 1; 
+  }
+
+  pub fn close_statement ( &mut self ) 
   {
     if self.create_statement.is_some() == true && self.create_statement.as_ref().unwrap().is_open == true
     {
@@ -154,60 +225,8 @@ impl TransactionBuilder
 
     self.err_state = Some( String::from( "Syntax Error: Closing Statement" ));
   }
-
-  pub fn add_token ( &mut self, token: SyntaxToken ) 
-  {
-    //println!( "{:?}", token );
-
-    match token.token_type 
-    {
-      SyntaxTokenType::KeywordMatch => { self.add_match_token( token ); },
-      SyntaxTokenType::KeywordCreate => { self.add_create( &token ); },
-      SyntaxTokenType::OpenNode => { self.add_open_node( &token ); },
-      SyntaxTokenType::CloseNode => { self.add_close_node( &token ); },
-      SyntaxTokenType::Label => { self.add_x_label( token ); },
-      SyntaxTokenType::PrimaryLabel => { self.add_x_label( token ); },
-      SyntaxTokenType::EdgeDirection => 
-      {
-        if self.find_open_bracket_statement().is_some() { self.try_update_bracket_statements( &token ); }
-        else { self.add_bracket( &token ); }
-      },
-      _ => {}
-    }
-  }
-
-  pub fn add_match_token ( &mut self, token: SyntaxToken ) 
-  {
-    if token.token_type != SyntaxTokenType::KeywordMatch 
-    {
-      self.err_state = Some( String::from( "Syntax Error: Match Clause" ));
-      return;
-    }
-    
-    if self.read_clause_order.is_none() 
-    { 
-      self.read_clause_order = Some( self.current_order );
-      self.current_order += 1;
-    }
-    self.match_statements.push_back( MatchStatement::new( self.current_order, true, None, None, None ));
-    self.current_order += 1;
-  }
-
-  pub fn add_open_node ( &mut self, token: &SyntaxToken ) 
-  { 
-    self.close_statement( token );
-
-    if token.token_type != SyntaxTokenType::OpenNode 
-    {
-      self.err_state = Some( String::from( "Syntax Error: Open Paren" ));
-      return;
-    }
-
-    self.paren_statements.push_back( ParenStatement::new( self.current_order, true, None, None ));
-    self.current_order += 1; 
-  }
   
-  pub fn add_close_node ( &mut self, token: &SyntaxToken ) { self.close_statement( token ); }
+  pub fn add_close_node ( &mut self ) { self.close_statement(); }
   
   pub fn add_x_label ( &mut self, token: SyntaxToken ) 
   {
@@ -232,18 +251,7 @@ impl TransactionBuilder
 
     self.err_state = Some( String::from( "Syntax Error: Label" ));
   }
-
-  pub fn add_create ( &mut self, _token: &SyntaxToken ) 
-  {
-    if self.create_statement.is_none() == true 
-    {
-      self.create_statement = Some( CreateStatement::new( self.current_order, None ));
-      self.current_order += 1;
-      return;
-    }
-    self.err_state = Some( String::from( "Syntax Error: Create" ));
-  }
-
+  
   pub fn add_bracket ( &mut self, token: &SyntaxToken ) 
   {
     self.bracket_statements.push_back( 
@@ -344,6 +352,7 @@ impl TransactionBuilder
     None
   }
 
+  // !!! this needs to find a new home
   pub fn token_dir_type ( token: &SyntaxToken ) -> DirectionType 
   {
     if token.token_type == SyntaxTokenType::EdgeDirection 
@@ -365,6 +374,214 @@ mod tests
 
   fn build_id () -> UUID { UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" )).unwrap() }
   fn db_nickname () -> Label { Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() }
+
+  #[test]
+  fn test_add_match_token () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_match_token();
+    
+    assert_eq!( tb.match_statements.len(), 1 );
+    assert_eq!( tb.current_order, 2 );
+
+    tb.add_match_token();
+    
+    assert_eq!( tb.match_statements.len(), 2 );
+    assert_eq!( tb.current_order, 3 );
+  
+    assert_eq!( tb.match_statements.get(0).unwrap().order, 1 );
+    assert_eq!( tb.match_statements.get(1).unwrap().order, 2 );
+  }
+
+  #[test]
+  fn test_add_create () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_create_token();
+    
+    assert_eq!( tb.create_statement.is_some(), true );
+    assert_eq!( tb.current_order, 1 );
+
+    tb.add_create_token();
+    
+    assert_eq!( tb.err_state.is_some(), true );
+  }
+
+  #[test]
+  fn test_add_open_node () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_match_token();
+    tb.add_open_node();
+
+    assert_eq!( tb.match_statements.len(), 1 );
+    assert_eq!( tb.paren_statements.len(), 1 );
+    assert_eq!( tb.current_order, 3 );
+
+    assert_eq!( tb.match_statements.get(0).unwrap().is_open, false );
+  }
+
+  #[test]
+  fn test_close_statement () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_create_token();
+    tb.close_statement();
+
+    assert_eq!( tb.create_statement.as_ref().unwrap().is_open, false );
+    assert_eq!( tb.err_state.is_some(), false );
+
+    tb.add_match_token();
+    tb.close_statement();
+
+    assert_eq!( tb.match_statements.len(), 1 );
+    assert_eq!( tb.match_statements.get(0).unwrap().is_open, false );
+    assert_eq!( tb.err_state.is_some(), false );
+
+    tb.add_match_token();
+    tb.add_open_node();
+    tb.close_statement();
+
+    assert_eq!( tb.paren_statements.len(), 1 );
+    assert_eq!( tb.paren_statements.get(0).unwrap().is_open, false );
+    assert_eq!( tb.err_state.is_some(), false );
+
+    tb.add_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
+    tb.close_statement();
+
+    assert_eq!( tb.bracket_statements.len(), 1 );
+    assert_eq!( tb.bracket_statements.get(0).unwrap().is_open, false );
+    assert_eq!( tb.err_state.is_some(), false );
+  }
+
+  #[test]
+  fn test_find_open_match_statement () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_match_token();
+    let res = tb.find_open_match_statement();
+
+    assert_eq!( res, Some(0) );
+    assert_eq!( tb.match_statements.len(), 1 );
+    assert_eq!( tb.match_statements.get(0).unwrap().is_open, true );
+    assert_eq!( tb.err_state.is_some(), false );
+  }
+
+  #[test]
+  fn test_find_open_paren_statement () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_match_token();
+    tb.add_open_node();
+    let res = tb.find_open_paren_statement();
+
+    assert_eq!( res, Some(0) );
+    assert_eq!( tb.paren_statements.len(), 1 );
+    assert_eq!( tb.paren_statements.get(0).unwrap().is_open, true );
+    assert_eq!( tb.err_state.is_some(), false );
+  }
+
+  #[test]
+  fn test_find_open_bracket_statement () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
+    let res = tb.find_open_bracket_statement();
+
+    assert_eq!( res, Some(0) );
+    assert_eq!( tb.bracket_statements.len(), 1 );
+    assert_eq!( tb.bracket_statements.get(0).unwrap().is_open, true );
+    assert_eq!( tb.err_state.is_some(), false );
+  }
+  
+  #[test]
+  fn test_add_close_node () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_match_token();
+    tb.add_open_node();
+    tb.add_close_node();
+
+    assert_eq!( tb.match_statements.len(), 1 );
+    assert_eq!( tb.paren_statements.len(), 1 );
+    assert_eq!( tb.current_order, 3 );
+
+    assert_eq!( tb.match_statements.get(0).unwrap().is_open, false );
+    assert_eq!( tb.paren_statements.get(0).unwrap().is_open, false );
+  }
+  
+  #[test]
+  fn test_try_update_paren_statements () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_match_token();
+    tb.add_open_node();
+
+    let res = tb.try_update_paren_statements( &SyntaxToken::new( SyntaxTokenType::Label, String::from( "abc" )));
+    
+    assert_eq!( res, true );
+    assert_eq!( tb.paren_statements.len(), 1 );
+    assert_eq!( tb.paren_statements.get(0).unwrap().is_open, true );
+    assert_eq!( tb.paren_statements.get(0).unwrap().transaction_label, Some( String::from( "abc" )));
+    assert_eq!( tb.err_state.is_some(), false );
+  }
+
+  #[test]
+  fn test_try_update_bracket_statements () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
+
+    let res = tb.try_update_bracket_statements( &SyntaxToken::new( SyntaxTokenType::Label, String::from( "abc" )));
+    
+    assert_eq!( res, true );
+    assert_eq!( tb.bracket_statements.len(), 1 );
+    assert_eq!( tb.bracket_statements.get(0).unwrap().is_open, true );
+    assert_eq!( tb.bracket_statements.get(0).unwrap().transaction_label, Some( String::from( "abc" )));
+    assert_eq!( tb.err_state.is_some(), false );
+  }
+
+  #[test]
+  fn test_try_update_match_statements () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_match_token();
+
+    let res = tb.try_update_match_statements( &SyntaxToken::new( SyntaxTokenType::Label, String::from( "abc" )));
+    
+    assert_eq!( res, true );
+    assert_eq!( tb.match_statements.len(), 1 );
+    assert_eq!( tb.match_statements.get(0).unwrap().is_open, true );
+    assert_eq!( tb.match_statements.get(0).unwrap().transaction_label, Some( String::from( "abc" )));
+    assert_eq!( tb.err_state.is_some(), false );
+  }
+
+  #[test]
+  fn test_add_x_label () 
+  {
+    // !!! needs rest of branches
+    let mut tb = TransactionBuilder::new();
+    tb.add_match_token();
+    tb.add_open_node();
+    tb.add_x_label( SyntaxToken::new( SyntaxTokenType::Label, String::from( "abc" )) );
+
+    assert_eq!( tb.paren_statements.len(), 1 );
+    assert_eq!( tb.paren_statements.get(0).unwrap().is_open, true );
+    assert_eq!( tb.paren_statements.get(0).unwrap().transaction_label, Some( String::from( "abc" )));
+    assert_eq!( tb.err_state.is_some(), false );
+  }
+
+  #[test]
+  fn test_add_bracket () 
+  {
+    let mut tb = TransactionBuilder::new();
+    tb.add_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
+
+    assert_eq!( tb.bracket_statements.len(), 1 );
+    assert_eq!( tb.bracket_statements.get(0).unwrap().is_open, true );
+    assert_eq!( tb.err_state.is_some(), false );
+  }
+  // -------------------------------------------------------------------------------------------------------------------
 
   #[test]
   fn test_se1 () 

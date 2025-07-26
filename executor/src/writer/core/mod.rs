@@ -5,6 +5,8 @@ use datagramv2::grams::{ DGu64, Label, UUID };
 use datagramv2::rows::{ BuildIDRow, DBNicknameRow, EdgeRow, GraphRow, NodeRow, PageRow };
 use crate::core_planner::{ EmptySpace, WriteNewGraphPlanner };
 
+
+#[derive(Debug)]
 pub struct PageWriteResult 
 {
   pub empty_cell_count: usize,
@@ -96,7 +98,7 @@ impl CoreWriteExecutor
   }
 
 
-  /// Write new node to data page
+  /// Write new node to data page (!!! handle errors)
   pub fn write_node ( 
     graph_order: &DGu64, node_id: &UUID, primary_label: &Label, 
     writer: &mut BufWriter<File> )
@@ -105,7 +107,7 @@ impl CoreWriteExecutor
   }
 
 
-  /// Write new edge to data page
+  /// Write new edge to data page (!!! handle errors)
   pub fn write_edge ( 
     graph_order: &DGu64, edge_id: &UUID, primary_label: &Label, 
     edge_dir: &str, left_uuid: &UUID, right_uuid: &UUID, 

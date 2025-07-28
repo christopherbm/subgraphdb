@@ -1,8 +1,9 @@
-# subgraphdb
+# SubgraphDB
 SubGraphDB. A flat-file graph database built with Rust.
-Goal: Create a performant graph database that can run from a browse tab to a micro-controller.
+Goal: Create a performant graph database that can run anywhere from a browse tab to a micro-controller.
 
-### In Alpha Development
+### Lifecycle
+- Pre-Alpha development. We will move to Alpha when a basic set of Cypher compatibility is met and the CLI is working.
 
 ### Workspaces
 - API: central hub for beginning interactions with SDB

@@ -7,16 +7,10 @@ categories = ["database", "graph", "data"]
 description = "A flat-file graph database"
 license = "Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/subgraph/subgraphdb"
+repository = "https://github.com/subgraphdb/subgraphdb"
 
 [dependencies]
-common = { path = "./common" }
-sdb = { path = "./sdb" }
-sdb_config = { path = "./sdb_config" }
-cli = { path = "./cli" }
-datagram = { path = "./datagram" }
-planner = { path = "./planner" }
 
-[workspace]
-members = [ "common", "sdb", "sdb_config", "cli", "datagram" , "graph", "api", "utils", "cmd", "planner", 
-"executor", "parser", "tokenize", "datagramv2", "adjacency_matrix", "result"]
+[dependencies.uuid]
+version = "1.17.0"
+features = [ "v4" ]

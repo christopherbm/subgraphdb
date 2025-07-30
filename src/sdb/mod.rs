@@ -4,6 +4,8 @@
 //pub mod multi_file;
 //pub mod traits;
 
+/* @version 0.3.0 */
+
 use crate::sdb_config::{ SDBConfiguration, FileMode, default_im_config, default_sf_config, default_mf_config };
 //use enums::{ SDBType };
 //use in_memory::{ InMemoryDB, cons_im_db };

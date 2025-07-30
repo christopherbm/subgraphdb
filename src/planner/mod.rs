@@ -9,6 +9,8 @@ use crate::tokenize::{ SyntaxToken, SyntaxTokenType };
 use crate::datagramv2::grams::{ Label, UUID };
 use crate::utils::cons_uuid;
 
+/* @version 0.3.0 */
+
 /*
 - For every N Transactions, a checkpoint transaction will be called that organizes the data.
 - Certain actions will force a checkpoint. These should be isolated, but still part of a transaction.

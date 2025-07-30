@@ -4,6 +4,8 @@ use crate::common::{ DirectionType, KeyValString };
 use crate::tokenize::{ SyntaxToken, SyntaxTokenType };
 use crate::utils::cons_uuid;
 
+/* @version 0.3.0 */
+
 // ---------------------------------------------------------------------------------------------------------------------
 #[derive( Debug )]
 pub struct ReadClause 

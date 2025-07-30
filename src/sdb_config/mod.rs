@@ -1,3 +1,5 @@
+/* @version 0.3.0 */
+
 /// Open Mode
 #[derive(Debug, PartialEq)]
 pub enum OpenMode 

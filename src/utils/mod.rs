@@ -4,6 +4,8 @@ use std::fs::{ exists, File, OpenOptions };
 use std::io::Error;
 use uuid::Uuid;
 
+/* @version 0.3.0 */
+
 // padded
 pub fn cons_uuid () -> String { String::from( Uuid::new_v4().to_string() )}
 

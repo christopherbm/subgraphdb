@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 //use fdm::{ is_file, is_dir, has_file_extension };
 
+/* @version 0.3.0 */
+
 static ARG_NOT_FOUND: &'static str = "::arg_not_found";
 static SHOW_FULL_HELP: &'static str = "::show_full_help";
 static CHECK_PATH: &'static str = "::check_path";

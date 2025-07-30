@@ -1,3 +1,5 @@
+/* @version 0.3.0 */
+
 #[derive( Debug, Clone )]
 pub struct SyntaxToken
 { 

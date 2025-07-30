@@ -3,6 +3,8 @@ pub mod reader;
 pub mod writer;
 pub mod core_planner;
 
+/* @version 0.3.0 */
+
 /*
 // !! page size needs to be configurable, but row size will be fixed. Page size cannot be changed after db creation.
 // !! there can be more than 1 sdb config page depending on number and complexity of graphs

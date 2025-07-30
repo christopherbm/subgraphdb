@@ -1,5 +1,7 @@
 use crate::tokenize::{ TokenType, token_type, SyntaxToken, SyntaxTokenType };
 
+/* @version 0.3.0 */
+
 #[ allow( unused_assignments )]
 pub fn parse_syntax ( content: &str ) -> Vec<SyntaxToken>
 {

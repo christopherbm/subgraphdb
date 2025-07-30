@@ -1,3 +1,5 @@
+/* @version 0.3.0 */
+
 /*
 Signed integers: i8, i16, i32, i64, i128 and isize (pointer size)
 Unsigned integers: u8, u16, u32, u64, u128 and usize (pointer size)

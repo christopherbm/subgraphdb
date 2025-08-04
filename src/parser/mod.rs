@@ -324,7 +324,11 @@ mod tests
     assert_eq!( tokens11.len(), 12 );
     
     
-    //println!( "{:?} LEN:{:?}", tokens10, tokens10.len() );
+    // --
+    let tokens12: Vec<SyntaxToken> = parse_syntax( "MATCH (:Movie {title: 'Wall Street'})" );
+    assert_eq!( tokens12.len(), 8 );
+
+    println!( "{:?} LEN:{:?}", tokens12, tokens12.len() );
     
     // 
     // 

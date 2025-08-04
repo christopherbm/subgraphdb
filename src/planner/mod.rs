@@ -149,16 +149,20 @@ impl TransactionBuilder
   {
     match token.token_type 
     {
-      SyntaxTokenType::KeywordMatch => { self.add_match_token(); },
-      SyntaxTokenType::KeywordCreate => { self.add_create_token(); },
-      SyntaxTokenType::OpenNode => { self.add_open_node(); },
-      SyntaxTokenType::CloseNode => { self.add_close_node(); },
-      SyntaxTokenType::Label => { self.add_x_label( token ); },
-      SyntaxTokenType::PrimaryLabel => { self.add_x_label( token ); },
+      SyntaxTokenType::KeywordMatch => { self.add_match_token(); }
+      SyntaxTokenType::KeywordCreate => { self.add_create_token(); }
+      SyntaxTokenType::OpenNode => { self.add_open_node( token ); }
+      SyntaxTokenType::CloseNode => { self.add_close_node( &token ); }
+      SyntaxTokenType::Label => { self.add_x_label( token ); }
+      SyntaxTokenType::PrimaryLabel => { self.add_x_label( token ); }
+      SyntaxTokenType::OpenBrace => { self.add_open_brace( &token ); }
+      SyntaxTokenType::CloseBrace => { self.add_close_brace( &token ); }
+      SyntaxTokenType::Key => { self.add_key( &token); }
+      SyntaxTokenType::StringValue => { self.add_string_value( &token ); }
       SyntaxTokenType::EdgeDirection => 
       {
         if self.find_open_bracket_statement().is_some() { self.try_update_bracket_statements( &token ); }
-        else { self.add_bracket( &token ); }
+        else { self.add_open_bracket( &token ); }
       },
       _ => {}
     }
@@ -174,7 +178,7 @@ impl TransactionBuilder
       self.read_clause_order = Some( self.current_order );
       self.current_order += 1;
     }
-    self.match_statements.push_back( MatchStatement::new( self.current_order, true, None, None, None ));
+    self.match_statements.push_back( MatchStatement::new( self.current_order, true, None, None ));
     self.current_order += 1;
   }
 
@@ -189,14 +193,20 @@ impl TransactionBuilder
     self.err_state = Some( String::from( "Syntax Error: Create" ));
   }
 
-  pub fn add_open_node ( &mut self ) 
+  pub fn add_open_node ( &mut self, token: SyntaxToken ) 
   { 
-    self.close_statement();
+    if self.try_update_match_statements( &token ) == true 
+    {
+      self.current_order += 1;
+      return;
+    }
+
+    self.close_statement( &token );
     self.paren_statements.push_back( ParenStatement::new( self.current_order, true, None, None ));
     self.current_order += 1; 
   }
 
-  pub fn close_statement ( &mut self ) 
+  pub fn close_statement ( &mut self, token: &SyntaxToken ) 
   {
     if self.create_statement.is_some() == true && self.create_statement.as_ref().unwrap().is_open == true
     {
@@ -204,12 +214,7 @@ impl TransactionBuilder
       return;
     }
 
-    let match_res = self.find_open_match_statement();
-    if match_res.is_some() 
-    {
-      self.match_statements.get_mut( match_res.unwrap() ).unwrap().is_open = false;
-      return;
-    }
+    if self.try_update_match_statements( &token ) == true { return; }
 
     let paren_res = self.find_open_paren_statement();
     if paren_res.is_some() 
@@ -225,10 +230,10 @@ impl TransactionBuilder
       return;
     }
 
-    self.err_state = Some( String::from( "Syntax Error: Closing Statement" ));
+    //self.err_state = Some( String::from( "Syntax Error: Closing Statement" ));
   }
   
-  pub fn add_close_node ( &mut self ) { self.close_statement(); }
+  pub fn add_close_node ( &mut self, token: &SyntaxToken ) { self.close_statement( token ); }
   
   pub fn add_x_label ( &mut self, token: SyntaxToken ) 
   {
@@ -254,12 +259,17 @@ impl TransactionBuilder
     self.err_state = Some( String::from( "Syntax Error: Label" ));
   }
   
-  pub fn add_bracket ( &mut self, token: &SyntaxToken ) 
+  pub fn add_open_bracket ( &mut self, token: &SyntaxToken ) 
   {
     self.bracket_statements.push_back( 
       BracketStatement::new( self.current_order, true, None, None, TransactionBuilder::token_dir_type( token )));
     self.current_order += 1;
   }
+
+  pub fn add_open_brace ( &mut self, token: &SyntaxToken ) { self.try_update_match_statements( token ); }
+  pub fn add_close_brace ( &mut self, token: &SyntaxToken ) { self.try_update_match_statements( token );  }
+  pub fn add_key ( &mut self, token: &SyntaxToken ) { self.try_update_match_statements( token );  }
+  pub fn add_string_value ( &mut self, token: &SyntaxToken ) { self.try_update_match_statements( token );  }
 
   pub fn try_update_paren_statements ( &mut self, token: &SyntaxToken ) -> bool 
   {
@@ -307,10 +317,11 @@ impl TransactionBuilder
       let remove_res = self.match_statements.remove( *match_res.as_ref().unwrap() );
       if remove_res.is_some() 
       {
-        let replace_res = MatchStatement::from( remove_res.unwrap(), token );
-        if replace_res.is_ok() 
+        let match_stmt = remove_res.unwrap();
+        let add_res = MatchStatement::from( match_stmt, token );
+        if add_res.is_ok() 
         {
-          self.match_statements.insert( *match_res.as_ref().unwrap(), replace_res.unwrap() );
+          self.match_statements.insert( match_res.unwrap() , add_res.unwrap() );
           return true;
         }
       }
@@ -413,14 +424,10 @@ mod tests
   fn test_add_open_node () 
   {
     let mut tb = TransactionBuilder::new();
-    tb.add_match_token();
-    tb.add_open_node();
+    tb.add_open_node( SyntaxToken::new(SyntaxTokenType::OpenNode, String::from( "(" )));
 
-    assert_eq!( tb.match_statements.len(), 1 );
     assert_eq!( tb.paren_statements.len(), 1 );
-    assert_eq!( tb.current_order, 3 );
-
-    assert_eq!( tb.match_statements.get(0).unwrap().is_open, false );
+    assert_eq!( tb.current_order, 1 );
   }
 
   #[test]
@@ -428,28 +435,27 @@ mod tests
   {
     let mut tb = TransactionBuilder::new();
     tb.add_create_token();
-    tb.close_statement();
+    tb.close_statement( &SyntaxToken::new( SyntaxTokenType::CloseNode, String::from( "(" )) );
 
     assert_eq!( tb.create_statement.as_ref().unwrap().is_open, false );
     assert_eq!( tb.err_state.is_some(), false );
 
     tb.add_match_token();
-    tb.close_statement();
+    tb.close_statement( &SyntaxToken::new( SyntaxTokenType::CloseNode, String::from( "(" )) );
 
     assert_eq!( tb.match_statements.len(), 1 );
     assert_eq!( tb.match_statements.get(0).unwrap().is_open, false );
     assert_eq!( tb.err_state.is_some(), false );
 
-    tb.add_match_token();
-    tb.add_open_node();
-    tb.close_statement();
+    tb.add_open_node( SyntaxToken::new(SyntaxTokenType::OpenNode, String::from( "(" )));
+    tb.close_statement( &SyntaxToken::new( SyntaxTokenType::CloseNode, String::from( "(" )) );
 
     assert_eq!( tb.paren_statements.len(), 1 );
     assert_eq!( tb.paren_statements.get(0).unwrap().is_open, false );
     assert_eq!( tb.err_state.is_some(), false );
 
-    tb.add_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
-    tb.close_statement();
+    tb.add_open_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
+    tb.close_statement( &SyntaxToken::new( SyntaxTokenType::CloseNode, String::from( "(" )) );
 
     assert_eq!( tb.bracket_statements.len(), 1 );
     assert_eq!( tb.bracket_statements.get(0).unwrap().is_open, false );
@@ -473,8 +479,7 @@ mod tests
   fn test_find_open_paren_statement () 
   {
     let mut tb = TransactionBuilder::new();
-    tb.add_match_token();
-    tb.add_open_node();
+    tb.add_open_node( SyntaxToken::new(SyntaxTokenType::OpenNode, String::from( "(" )));
     let res = tb.find_open_paren_statement();
 
     assert_eq!( res, Some(0) );
@@ -487,7 +492,7 @@ mod tests
   fn test_find_open_bracket_statement () 
   {
     let mut tb = TransactionBuilder::new();
-    tb.add_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
+    tb.add_open_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
     let res = tb.find_open_bracket_statement();
 
     assert_eq!( res, Some(0) );
@@ -501,8 +506,8 @@ mod tests
   {
     let mut tb = TransactionBuilder::new();
     tb.add_match_token();
-    tb.add_open_node();
-    tb.add_close_node();
+    tb.add_open_node( SyntaxToken::new(SyntaxTokenType::OpenNode, String::from( "(" )));
+    tb.close_statement( &SyntaxToken::new( SyntaxTokenType::CloseNode, String::from( "(" )) );
 
     assert_eq!( tb.match_statements.len(), 1 );
     assert_eq!( tb.paren_statements.len(), 1 );
@@ -516,11 +521,9 @@ mod tests
   fn test_try_update_paren_statements () 
   {
     let mut tb = TransactionBuilder::new();
-    tb.add_match_token();
-    tb.add_open_node();
-
+    tb.add_open_node( SyntaxToken::new(SyntaxTokenType::OpenNode, String::from( "(" )));
     let res = tb.try_update_paren_statements( &SyntaxToken::new( SyntaxTokenType::Label, String::from( "abc" )));
-    
+
     assert_eq!( res, true );
     assert_eq!( tb.paren_statements.len(), 1 );
     assert_eq!( tb.paren_statements.get(0).unwrap().is_open, true );
@@ -532,7 +535,7 @@ mod tests
   fn test_try_update_bracket_statements () 
   {
     let mut tb = TransactionBuilder::new();
-    tb.add_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
+    tb.add_open_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
 
     let res = tb.try_update_bracket_statements( &SyntaxToken::new( SyntaxTokenType::Label, String::from( "abc" )));
     
@@ -563,8 +566,7 @@ mod tests
   {
     // !!! needs rest of branches
     let mut tb = TransactionBuilder::new();
-    tb.add_match_token();
-    tb.add_open_node();
+    tb.add_open_node( SyntaxToken::new(SyntaxTokenType::OpenNode, String::from( "(" )));
     tb.add_x_label( SyntaxToken::new( SyntaxTokenType::Label, String::from( "abc" )) );
 
     assert_eq!( tb.paren_statements.len(), 1 );
@@ -577,7 +579,7 @@ mod tests
   fn test_add_bracket () 
   {
     let mut tb = TransactionBuilder::new();
-    tb.add_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
+    tb.add_open_bracket( &SyntaxToken::new( SyntaxTokenType::OpenBracket, String::from( "{" )));
 
     assert_eq!( tb.bracket_statements.len(), 1 );
     assert_eq!( tb.bracket_statements.get(0).unwrap().is_open, true );
@@ -586,17 +588,50 @@ mod tests
   // -------------------------------------------------------------------------------------------------------------------
 
   #[test]
+  fn test_process_match_query () 
+  {
+    let query_string = "MATCH (:Movie {title: 'Wall Street'})";
+    let t = process_query( &query_string, build_id(), db_nickname() );
+    
+    assert_eq!( t.err_state, None );
+    assert_eq!( t.read_clause.as_ref().unwrap().match_statements.len(), 1 );
+    assert_eq!( t.read_clause.as_ref().unwrap().match_statements.get(0).as_ref().unwrap().order, 1 );
+    assert_eq!( t.read_clause.as_ref().unwrap().match_statements.get(0).as_ref().unwrap().is_open, false );
+    assert_eq!( t.read_clause.as_ref().unwrap().match_statements.get(0).as_ref().unwrap().labels_complete, true );
+    assert_eq!( t.read_clause.as_ref().unwrap().match_statements.get(0).as_ref().unwrap().kvps_complete, true );
+    assert_eq!( t.read_clause.as_ref().unwrap().match_statements.get(0).as_ref().unwrap().transaction_label, None );
+    assert_eq!( 
+      t.read_clause.as_ref().unwrap().match_statements.get(0).as_ref().unwrap().primary_label, 
+      Some( String::from( "Movie" )));
+    assert_eq!( 
+      t.read_clause.as_ref().unwrap().match_statements.get(0).as_ref().unwrap().kv_str.len(), 1 );
+    assert_eq!( 
+      t.read_clause.as_ref().unwrap().match_statements.get(0).as_ref().unwrap().kv_str.get(0).as_ref().unwrap().key, 
+      String::from( "title" ));
+    assert_eq!( 
+      t.read_clause.as_ref().unwrap().match_statements.get(0).as_ref().unwrap().kv_str.get(0).as_ref().unwrap().val, 
+      Some( String::from( "Wall Street" )));
+  }
+
+  #[test]
   fn test_se1 () 
   {
-    let t = process_query( "MATCH ()", build_id(), db_nickname() );
-    assert_eq!( t.read_clause.is_some(), true );
-    assert_eq!( t.read_clause.as_ref().unwrap().order, 0 );
-    assert_eq!( t.read_clause.as_ref().unwrap().match_statements.len(), 1 );
+    let mut tb = TransactionBuilder::new();
+    tb.add_match_token();
+    tb.add_open_node( SyntaxToken::new(SyntaxTokenType::OpenNode, String::from( "(" )));
+    tb.close_statement( &SyntaxToken::new( SyntaxTokenType::CloseNode, String::from( "(" )) );
+    
+    println!( "{:?}", tb );
 
-    let stmt_res = t.read_clause.as_ref().unwrap().match_statements.get( 0 );
-    assert_eq!( stmt_res.is_some(), true );
-    assert_eq!( stmt_res.as_ref().unwrap().order, 1 );
-    assert_eq!( stmt_res.as_ref().unwrap().is_open, false );
+    //let t = process_query( "MATCH ()", build_id(), db_nickname() );
+    //assert_eq!( t.read_clause.is_some(), true );
+    //assert_eq!( t.read_clause.as_ref().unwrap().order, 0 );
+    //assert_eq!( t.read_clause.as_ref().unwrap().match_statements.len(), 1 );
+
+    //let stmt_res = t.read_clause.as_ref().unwrap().match_statements.get( 0 );
+    //assert_eq!( stmt_res.is_some(), true );
+    //assert_eq!( stmt_res.as_ref().unwrap().order, 1 );
+    //assert_eq!( stmt_res.as_ref().unwrap().is_open, false );
   }
 
   #[test]

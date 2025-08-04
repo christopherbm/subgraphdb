@@ -51,11 +51,19 @@ pub fn bool_to_affix ( b: bool ) -> &'static str
 }
 
 #[derive( Debug )]
-pub struct KeyValString
+pub struct KeyValString { pub key: String, pub val: Option<String> }
+
+impl KeyValString 
 {
-  pub order: u16,
-  pub key: String,
-  pub val: String,
+  pub fn new ( key: String, val: Option<String> ) -> KeyValString
+  {
+    KeyValString { key: key, val: val }
+  }
+
+  pub fn from ( kvs: &KeyValString, val: String ) -> KeyValString 
+  {
+    KeyValString { key: kvs.key.clone(), val: Some( val ) }
+  }
 }
 
 

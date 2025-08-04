@@ -29,58 +29,138 @@ pub struct MatchStatement
 {
   pub order: u16, // must be query order
   pub is_open: bool,
+  pub labels_complete: bool, // whether or not labels can still be added
+  pub kvps_complete: bool, // whether or not key-value pairs can still be added
   pub transaction_label: Option<String>,
   pub primary_label: Option<String>,
-  pub kv_str: Option<Vec<KeyValString>>,
+  pub kv_str: Vec<KeyValString>,
 }
 impl MatchStatement 
 {
   pub fn new ( 
-    order: u16, is_open: bool, transaction_label: Option<String>, primary_label: Option<String>, 
-    kv_str: Option<Vec<KeyValString>> ) -> MatchStatement 
+    order: u16, is_open: bool, transaction_label: Option<String>, primary_label: Option<String> ) -> MatchStatement 
   {
     MatchStatement { 
       order: order, 
       is_open: is_open, 
+      labels_complete: false,
+      kvps_complete: false,
       transaction_label: transaction_label, 
       primary_label: primary_label, 
-      kv_str: kv_str 
+      kv_str: Vec::new()
     }
   }
 
-  pub fn from ( stmt: MatchStatement, token: &SyntaxToken ) -> Result<MatchStatement, String> 
+  pub fn from ( old_stmt: MatchStatement, token: &SyntaxToken ) -> Result<MatchStatement, String> 
   {
     match token.token_type 
     {
       SyntaxTokenType::Label => 
       {
-        return Ok(
-          MatchStatement { 
-            order: stmt.order, 
-            is_open: stmt.is_open, 
-            transaction_label: Some( token.val.clone() ), 
-            primary_label: stmt.primary_label, 
-            kv_str: stmt.kv_str 
-          }
-        )
-      },
+        if old_stmt.transaction_label.is_none() == true && old_stmt.labels_complete == false 
+        {
+          return Ok( MatchStatement::new(
+            old_stmt.order, 
+            old_stmt.is_open, 
+            Some( token.val.clone() ), 
+            old_stmt.primary_label ));
+        }
+      }
+
       SyntaxTokenType::PrimaryLabel => 
       {
-        return Ok(
-          MatchStatement { 
-            order: stmt.order, 
-            is_open: stmt.is_open, 
-            transaction_label: stmt.transaction_label, 
-            primary_label: Some( token.val.clone() ), 
-            kv_str: stmt.kv_str 
-          }
-        )
-      },
-      
+        if old_stmt.primary_label.is_none() == true && old_stmt.labels_complete == false 
+        {
+          return Ok( MatchStatement::new(
+            old_stmt.order, 
+            old_stmt.is_open, 
+            old_stmt.transaction_label, 
+            Some( token.val.clone() )));
+        }
+      }
+
+      SyntaxTokenType::OpenNode => 
+      {
+        let stmt = MatchStatement::new( 
+          old_stmt.order, 
+          old_stmt.is_open, 
+          old_stmt.transaction_label, 
+          old_stmt.primary_label );
+        return Ok( stmt );
+      }
+
+      SyntaxTokenType::CloseNode => 
+      {
+        let mut stmt = MatchStatement::new( 
+          old_stmt.order, 
+          old_stmt.is_open, 
+          old_stmt.transaction_label, 
+          old_stmt.primary_label );
+        stmt.is_open = false;
+        stmt.kv_str = old_stmt.kv_str;
+        stmt.kvps_complete = old_stmt.kvps_complete;
+        stmt.labels_complete = old_stmt.labels_complete;
+        return Ok( stmt );
+      }
+
+      SyntaxTokenType::OpenBrace => 
+      {
+        let mut stmt = MatchStatement::new( 
+          old_stmt.order, 
+          old_stmt.is_open, 
+          old_stmt.transaction_label, 
+          old_stmt.primary_label );
+        stmt.labels_complete = true;
+        return Ok( stmt );
+      }
+
+      SyntaxTokenType::CloseBrace => 
+      {
+        let mut stmt = MatchStatement::new( 
+          old_stmt.order, 
+          old_stmt.is_open, 
+          old_stmt.transaction_label, 
+          old_stmt.primary_label );
+        stmt.kvps_complete = true;
+        stmt.labels_complete = old_stmt.labels_complete;
+        stmt.kv_str = old_stmt.kv_str;
+        return Ok( stmt );
+      }
+
+      SyntaxTokenType::Key => 
+      {
+        let mut stmt = MatchStatement::new( 
+          old_stmt.order, 
+          old_stmt.is_open, 
+          old_stmt.transaction_label, 
+          old_stmt.primary_label );
+        stmt.labels_complete = old_stmt.labels_complete;
+        stmt.kv_str = old_stmt.kv_str;
+        stmt.kv_str.push( KeyValString::new( token.val.clone(), None ));
+        return Ok( stmt );
+      }
+
+      SyntaxTokenType::StringValue => 
+      {
+        if old_stmt.kv_str.len() > 0 
+        {
+          let mut stmt = MatchStatement::new( 
+            old_stmt.order, 
+            old_stmt.is_open, 
+            old_stmt.transaction_label, 
+            old_stmt.primary_label );
+          stmt.labels_complete = old_stmt.labels_complete;
+          stmt.kv_str = old_stmt.kv_str;
+          let kvp_opt = stmt.kv_str.pop();
+          stmt.kv_str.push( KeyValString::from( &kvp_opt.unwrap(), token.val.clone() ));
+          return Ok( stmt );
+        }
+      }
+
       _ => {}
     }
     Err( String::from( "Syntax Error: Match Statement" ))
-  } 
+  }
 }
 
 #[derive( Debug, Clone )]
@@ -239,7 +319,8 @@ impl BracketStatement
             edge_dir: stmt.edge_dir,
           }
         )
-      },
+      }
+
       SyntaxTokenType::PrimaryLabel => 
       {
         return Ok(
@@ -251,12 +332,12 @@ impl BracketStatement
             edge_dir: stmt.edge_dir,
           }
         )
-      },
+      }
       
       SyntaxTokenType::EdgeDirection => 
       {
         if token.val == "-" { return Ok( stmt ); }
-      },
+      }
 
       _ => {}
     }
@@ -331,5 +412,73 @@ impl EdgeStatement
   pub fn new ( id: String, order: u16, transaction_label: Option<String>, primary_label: String ) -> EdgeStatement
   {
     EdgeStatement { id: id, query_order: order, transaction_label: transaction_label, primary_label: primary_label }
+  }
+}
+
+#[cfg(test)]
+mod tests 
+{
+  use super::*;
+
+  #[test]
+  fn test_match_statement () 
+  {
+    // -- new
+    let ms = MatchStatement::new( 
+      5, 
+      true, 
+      Some( String::from( "transaction label" )), 
+      Some( String::from( "primary label" )));
+    
+    assert_eq!( ms.order, 5 );
+    assert_eq!( ms.is_open, true );
+    assert_eq!( ms.transaction_label, Some( String::from( "transaction label" )));
+    assert_eq!( ms.primary_label, Some( String::from( "primary label" )));
+
+    // -- labels
+    let ms1 = MatchStatement::new( 5, true, None, None );
+    let res1 = MatchStatement::from( ms1, &SyntaxToken::new( SyntaxTokenType::Label, String::from( "transaction label" )));
+    assert_eq!( res1.is_ok(), true );
+    assert_eq!( res1.as_ref().unwrap().transaction_label.is_some(), true );
+    assert_eq!( res1.as_ref().unwrap().transaction_label, Some( String::from( "transaction label" )));
+
+    let res2 = MatchStatement::from( res1.unwrap(), &SyntaxToken::new( SyntaxTokenType::PrimaryLabel, String::from( "primary label" )));
+    assert_eq!( res2.is_ok(), true );
+    assert_eq!( res2.as_ref().unwrap().primary_label.is_some(), true );
+    assert_eq!( res2.as_ref().unwrap().primary_label, Some( String::from( "primary label" )));
+
+    // -- open / close nodes
+    let ms2 = MatchStatement::new( 5, true, None, None );
+    let res3 = MatchStatement::from( ms2, &SyntaxToken::new( SyntaxTokenType::OpenNode, String::from( "(" )));
+    assert_eq!( res3.is_ok(), true );
+    assert_eq!( res3.as_ref().unwrap().labels_complete, true );
+
+    let ms4 = MatchStatement::new( 5, true, None, None );
+    let res4 = MatchStatement::from( ms4, &SyntaxToken::new( SyntaxTokenType::CloseNode, String::from( ")" )));
+    assert_eq!( res4.is_ok(), true );
+    assert_eq!( res4.as_ref().unwrap().is_open, false );
+
+    // -- braces
+    let ms5 = MatchStatement::new( 5, true, None, None );
+    let res5 = MatchStatement::from( ms5, &SyntaxToken::new( SyntaxTokenType::OpenBrace, String::from( "{" )));
+    assert_eq!( res5.is_ok(), true );
+    assert_eq!( res5.as_ref().unwrap().labels_complete, true );
+
+    let ms6 = MatchStatement::new( 5, true, None, None );
+    let res6 = MatchStatement::from( ms6, &SyntaxToken::new( SyntaxTokenType::CloseBrace, String::from( "}" )));
+    assert_eq!( res6.is_ok(), true );
+    assert_eq!( res6.as_ref().unwrap().kvps_complete, true );
+
+    // -- kv str
+    let ms7 = MatchStatement::new( 5, true, None, None );
+    let res7 = MatchStatement::from( ms7, &SyntaxToken::new( SyntaxTokenType::Key, String::from( "key" )));
+    assert_eq!( res7.is_ok(), true );
+    assert_eq!( res7.as_ref().unwrap().kv_str.len(), 1 );
+
+    let res7_1 = MatchStatement::from( res7.unwrap(), &SyntaxToken::new( SyntaxTokenType::StringValue, String::from( "val" )));
+    assert_eq!( res7_1.is_ok(), true );
+    assert_eq!( res7_1.as_ref().unwrap().kv_str.len(), 1 );
+    assert_eq!( res7_1.as_ref().unwrap().kv_str.get( 0 ).unwrap().key, String::from( "key" ));
+    assert_eq!( res7_1.as_ref().unwrap().kv_str.get( 0 ).unwrap().val, Some( String::from( "val" )));
   }
 }

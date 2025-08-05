@@ -1,11 +1,11 @@
-use std::path::PathBuf;
+//use std::path::PathBuf;
 //use fdm::{ is_file, is_dir, has_file_extension };
 
 /* @version 0.3.0 */
 
-static ARG_NOT_FOUND: &'static str = "::arg_not_found";
-static SHOW_FULL_HELP: &'static str = "::show_full_help";
-static CHECK_PATH: &'static str = "::check_path";
+//static ARG_NOT_FOUND: &'static str = "::arg_not_found";
+//static SHOW_FULL_HELP: &'static str = "::show_full_help";
+//static CHECK_PATH: &'static str = "::check_path";
 
 /*
   - / Initialize (Create) In-Memory Database (Default Configuration)
@@ -82,7 +82,7 @@ pub fn check_first_arg ( arg_opt: Option<String> ) -> ArgOneAction
     if arg == String::from( "-help" ) { return ArgOneAction::ShowFullHelp }
     if arg == String::from( "-im" ) { return ArgOneAction::InteractiveMode }
     
-    let path = PathBuf::from( arg );
+    //let path = PathBuf::from( arg );
     
     // existing file or path
     //if is_file( &path ) { return ArgOneAction::CheckFilePath }
@@ -127,10 +127,7 @@ pub fn check_third_arg ( arg_opt: Option<String> ) -> ArgThreeAction
 // ---------------------------------------------------------------------------------------------------------------------
 
 /// Show Full Help
-fn show_full_help () 
-{
-  println!( "Full help" )
-}
+//fn show_full_help () { println!( "Full help" ) }
 
 // ---------------------------------------------------------------------------------------------------------------------
 #[cfg(test)]

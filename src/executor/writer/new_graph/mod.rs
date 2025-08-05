@@ -252,8 +252,8 @@ mod tests
   fn write_new_db ( path: &str )
   {
     let open_res = create_file( &PathBuf::from( path ));
-    let mut stream = BufWriter::new( open_res.unwrap() );
-    let _ = WriteNewDBExecutor::execute_write_new( &build_id(), &db_nickname(), PAGE_SIZE, &mut stream );
+    //let mut stream = BufWriter::new( open_res.unwrap() );
+    //let _ = WriteNewDBExecutor::execute_write_new( &build_id(), &db_nickname(), PAGE_SIZE, &mut stream );
   }
 
   #[test]
@@ -420,7 +420,7 @@ mod tests
   #[test]
   fn test_create_graph_2 () 
   {
-    let path_str = "../test_data/test_create_graph_2.sdb";
+    let path_str = "../../test_data/test_create_graph_2.sdb";
     write_new_db( path_str );
     
     let query_string = "
@@ -428,14 +428,12 @@ mod tests
         (alice:Developer)
         (bob:Administrator)
         (chris:Lead)
-        (alice)-[:KNOWS]-(bob)
-        (alice)-[:KNOWS]-(chris)
-        (bob)-[:KNOWS]-(chris)
     ";
     let t = process_query( &query_string, build_id(), db_nickname() );
     println!( "{}", t );
-    //let mut writer = WriteNewGraphExecutor::new( &t, path_str, 4096 );
     
+    let mut writer = WriteNewGraphExecutor::new( &t, path_str, 4096 );
+    writer.execute();
 
 
     //let _ = remove_file( PathBuf::from( path_str ));

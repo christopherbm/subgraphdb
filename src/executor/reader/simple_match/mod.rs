@@ -32,13 +32,15 @@ impl SimpleMatchExecutor<'_>
       page_size: page_size,
     } 
   }
+
+  pub fn execute ( &mut self ) {}
 }
 
 #[cfg(test)]
 mod tests 
 { 
   use super::*;
-  use std::fs::metadata;
+  use std::fs::{ metadata, remove_file };
   use std::path::PathBuf;
   use std::io::BufWriter;
   use crate::common::LABEL_BYTES;
@@ -71,10 +73,12 @@ mod tests
 
     let query_string = "MATCH ()";
     let t = process_query( &query_string, build_id(), db_nickname() );
-
     println!( "{}", t );
-    /* 
+
+    let mut read_executor = SimpleMatchExecutor::new( &t, path_str, 4096 );
     
+    let _ = remove_file( PathBuf::from( path_str ));
+    /* 
     let mut write_executor = WriteNewGraphExecutor::new( &t, path_str, 4096 );
     
     write_executor.graph_name = Some( Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() );
@@ -92,8 +96,6 @@ mod tests
     let _ = write_executor.write_node( &stmt, 0, &mut writer );
 
     assert_eq!( write_executor.err_state, None );
-
-    let _ = remove_file( PathBuf::from( path_str ));
     */
   }
 }

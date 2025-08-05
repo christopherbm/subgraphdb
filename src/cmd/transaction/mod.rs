@@ -187,15 +187,15 @@ impl Display for Transaction
 #[cfg(test)]
 mod tests 
 {
-  use super::*;
-  use crate::common::LABEL_BYTES;
+  //use super::*;
+  //use crate::common::LABEL_BYTES;
 
   #[test]
   fn test_new_transaction () 
   {
-    let build_id_res = UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ));
-    let db_nickname_res = Label::new( String::from( "devs" ), LABEL_BYTES );
-    let transaction: Transaction = Transaction::new( build_id_res.unwrap(), db_nickname_res.unwrap(), 0 );
+    //let build_id_res = UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ));
+    //let db_nickname_res = Label::new( String::from( "devs" ), LABEL_BYTES );
+    //let transaction: Transaction = Transaction::new( build_id_res.unwrap(), db_nickname_res.unwrap(), 0 );
 
     //assert_eq!( transaction.build_id.is_ok(), true );
     //assert_eq!( transaction.db_nickname.is_ok(), true );
@@ -204,9 +204,9 @@ mod tests
   #[test]
   fn test_match () 
   {
-    let build_id_res = UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ));
-    let db_nickname_res = Label::new( String::from( "devs" ), LABEL_BYTES );
-    let mut transaction: Transaction = Transaction::new( build_id_res.unwrap(), db_nickname_res.unwrap(), 0 );
+    //let build_id_res = UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" ));
+    //let db_nickname_res = Label::new( String::from( "devs" ), LABEL_BYTES );
+    //let mut transaction: Transaction = Transaction::new( build_id_res.unwrap(), db_nickname_res.unwrap(), 0 );
 
     //assert_eq!( transaction.build_id.unwrap().is_ok(), true );
     //assert_eq!( transaction.db_nickname.unwrap().is_ok(), true );

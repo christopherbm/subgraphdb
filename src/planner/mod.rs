@@ -229,8 +229,6 @@ impl TransactionBuilder
       self.bracket_statements.get_mut( bracket_res.unwrap() ).unwrap().is_open = false;
       return;
     }
-
-    //self.err_state = Some( String::from( "Syntax Error: Closing Statement" ));
   }
   
   pub fn add_close_node ( &mut self, token: &SyntaxToken ) { self.close_statement( token ); }

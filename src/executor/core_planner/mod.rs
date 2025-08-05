@@ -1,6 +1,6 @@
 use std::fs::{ File };
 use std::path::PathBuf;
-use crate::datagramv2::grams::{ UUID, Label };
+use crate::datagramv2::grams::{ Label };
 use crate::datagramv2::rows::{ affix_to_type, AffixType, PageType };
 use crate::utils::open_file;
 use crate::executor::core::CoreExecutor;

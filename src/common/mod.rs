@@ -1,11 +1,12 @@
+pub mod kvps;
+
 /* @version 0.3.0 */
 
+
 /*
-Signed integers: i8, i16, i32, i64, i128 and isize (pointer size)
-Unsigned integers: u8, u16, u32, u64, u128 and usize (pointer size)
+Signed integers: i8, i16, i32, i64, i128
+Unsigned integers: u8, u16, u32, u64, u128
 Floating point: f32, f64
-char Unicode scalar values like 'a', 'α' and '∞' (4 bytes each)
-bool either true or false
 */
 
 pub static BOOL_BYTES: usize = 8 as usize;
@@ -51,11 +52,18 @@ pub fn bool_to_affix ( b: bool ) -> &'static str
 }
 
 #[derive( Debug )]
-pub struct KeyValString
+pub struct KeyValString { pub key: String, pub val: Option<String> }
+impl KeyValString 
 {
-  pub order: u16,
-  pub key: String,
-  pub val: String,
+  pub fn new ( key: String, val: Option<String> ) -> KeyValString
+  {
+    KeyValString { key: key, val: val }
+  }
+
+  pub fn from ( kvs: &KeyValString, val: String ) -> KeyValString 
+  {
+    KeyValString { key: kvs.key.clone(), val: Some( val ) }
+  }
 }
 
 

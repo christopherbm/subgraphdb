@@ -6,6 +6,9 @@ use crate::datagramv2::dg_utils::next_u64;
 use crate::datagramv2::grams::{ DGu64, Label, UUID };
 
 // !! ALL VALUES MUST BE PADDED !!
+/*
+  Rows are clearly defined sections within a Page.
+*/
 
 pub struct BuildIDRow {}
 impl BuildIDRow 

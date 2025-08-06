@@ -4,8 +4,6 @@ pub mod kvps;
 
 
 /*
-Signed integers: i8, i16, i32, i64, i128
-Unsigned integers: u8, u16, u32, u64, u128
 Floating point: f32, f64
 */
 
@@ -50,22 +48,6 @@ pub fn bool_to_affix ( b: bool ) -> &'static str
   if b == true { return TRUE_AFFIX; }
   FALSE_AFFIX
 }
-
-#[derive( Debug )]
-pub struct KeyValString { pub key: String, pub val: Option<String> }
-impl KeyValString 
-{
-  pub fn new ( key: String, val: Option<String> ) -> KeyValString
-  {
-    KeyValString { key: key, val: val }
-  }
-
-  pub fn from ( kvs: &KeyValString, val: String ) -> KeyValString 
-  {
-    KeyValString { key: kvs.key.clone(), val: Some( val ) }
-  }
-}
-
 
 /// Node / Edge Property
 #[derive( Debug, PartialEq )]

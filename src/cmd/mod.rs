@@ -1,6 +1,7 @@
 pub mod transaction;
 
-use crate::common::{ DirectionType, KeyValString };
+use crate::common::{ DirectionType };
+use crate::common::kvps::{ KeyValString };
 use crate::tokenize::{ SyntaxToken, SyntaxTokenType };
 use crate::utils::cons_uuid;
 

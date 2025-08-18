@@ -1,3 +1,33 @@
+/*
+  These represent external types.
+  
+  Basic Types
+
+  1. KeyValString - For String values
+  2. KeyValBoolean - For boolean values
+
+  Signed Integer Types
+
+  3. KeyValI8 - For i8 values (8-bit signed)
+  4. KeyValI16 - For i16 values (16-bit signed)
+  5. KeyValI32 - For i32 values (32-bit signed)
+  6. KeyValI64 - For i64 values (64-bit signed)
+  7. KeyValI128 - For i128 values (128-bit signed)
+
+  Unsigned Integer Types
+
+  8. KeyValU8 - For u8 values (8-bit unsigned)
+  9. KeyValU16 - For u16 values (16-bit unsigned)
+  10. KeyValU32 - For u32 values (32-bit unsigned)
+  11. KeyValU64 - For u64 values (64-bit unsigned)
+  12. KeyValU128 - For u128 values (128-bit unsigned)
+
+  Floating-Point Types
+
+  13. KeyValF32 - For f32 values (32-bit float)
+  14. KeyValF64 - For f64 values (64-bit float)
+*/
+
 #[derive( Debug )]
 pub struct KeyValString { pub key: String, pub val: Option<String> }
 impl KeyValString 

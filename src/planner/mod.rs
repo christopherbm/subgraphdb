@@ -6,7 +6,7 @@ use crate::cmd::transaction::Transaction;
 use crate::common::DirectionType;
 use crate::parser::{ parse_syntax };
 use crate::tokenize::{ SyntaxToken, SyntaxTokenType };
-use crate::datagramv2::grams::{ Label, UUID };
+use crate::datagramv2::internal_grams::{ Label, UUID };
 use crate::utils::cons_uuid;
 
 /* @version 0.3.0 */
@@ -381,10 +381,9 @@ impl TransactionBuilder
 mod tests 
 {
   use super::*;
-  use crate::common::LABEL_BYTES;
 
   fn build_id () -> UUID { UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" )).unwrap() }
-  fn db_nickname () -> Label { Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() }
+  fn db_nickname () -> Label { Label::new( String::from( "devs" ) ).unwrap() }
 
   #[test]
   fn test_add_match_token () 

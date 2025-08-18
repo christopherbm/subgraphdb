@@ -43,8 +43,7 @@ mod tests
   use std::fs::{ metadata, remove_file };
   use std::path::PathBuf;
   use std::io::BufWriter;
-  use crate::common::LABEL_BYTES;
-  use crate::datagramv2::grams::{ Label, UUID };
+  use crate::datagramv2::internal_grams::{ Label, UUID };
   use crate::planner::process_query;
   use crate::utils::create_file;
   use crate::executor::writer::new_db::WriteNewDBExecutor;
@@ -52,7 +51,7 @@ mod tests
   const PAGE_SIZE: usize = 4096;
 
   fn build_id () -> UUID { UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" )).unwrap() }
-  fn db_nickname () -> Label { Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() }
+  fn db_nickname () -> Label { Label::new( String::from( "devs" ) ).unwrap() }
   fn write_new_db ( path: &str )
   {
     let open_res = create_file( &PathBuf::from( path ));

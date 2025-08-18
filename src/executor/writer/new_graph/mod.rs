@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use crate::cmd::{ transaction::Transaction, EdgeStatement, NodeStatement };
 use crate::common::{ direction_to_str, DirectionType, LABEL_BYTES };
-use crate::datagramv2::grams::{ DGu64, Label, UUID };
+use crate::datagramv2::internal_grams::{ DGu64, Label, UUID };
 use crate::utils::{ cons_uuid, open_file };
 
 use crate::executor::core::CoreExecutor;
@@ -148,7 +148,7 @@ impl WriteNewGraphExecutor<'_>
   pub fn write_node ( &mut self, stmt: &NodeStatement, graph_order: u64, writer: &mut BufWriter<File> ) 
   {
     let uuid_res = UUID::new( stmt.id.clone() );
-    let primary_label_res = Label::new( stmt.primary_label.clone(), LABEL_BYTES );
+    let primary_label_res = Label::new( stmt.primary_label.clone() );
     CoreWriteExecutor::write_node( 
       &DGu64::new( graph_order ), 
       &uuid_res.unwrap(), 
@@ -164,7 +164,7 @@ impl WriteNewGraphExecutor<'_>
     writer: &mut BufWriter<File> ) 
   {
     let uuid_res = UUID::new( stmt.id.clone() );
-    let primary_label_res = Label::new( stmt.primary_label.clone(), LABEL_BYTES );
+    let primary_label_res = Label::new( stmt.primary_label.clone() );
     CoreWriteExecutor::write_edge ( 
       &DGu64::new( graph_order ), 
       &uuid_res.unwrap(), 
@@ -181,7 +181,7 @@ impl WriteNewGraphExecutor<'_>
     let name_opt = self.find_graph_name();
     if name_opt.is_some() 
     {
-      let res = Label::new( name_opt.unwrap(), LABEL_BYTES );
+      let res = Label::new( name_opt.unwrap() );
       if res.is_ok() { self.graph_name = Some( res.unwrap() ); }
       else { return Err( String::from( "Error finding graph name." )); }
     }
@@ -248,7 +248,7 @@ mod tests
   const PAGE_SIZE: usize = 4096;
 
   fn build_id () -> UUID { UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" )).unwrap() }
-  fn db_nickname () -> Label { Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() }
+  fn db_nickname () -> Label { Label::new( String::from( "devs" ) ).unwrap() }
   fn write_new_db ( path: &str )
   {
     let open_res = create_file( &PathBuf::from( path ));
@@ -278,10 +278,10 @@ mod tests
     let t = process_query( &query_string, build_id(), db_nickname() );
     let mut write_executor = WriteNewGraphExecutor::new( &t, path_str, 4096 );
     
-    write_executor.graph_name = Some( Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() );
+    write_executor.graph_name = Some( Label::new( String::from( "devs" ) ).unwrap() );
     write_executor.graph_uuid = Some( UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0cX" )).unwrap() );
 
-    let name_label = Label::new( String::from( "devs2" ), LABEL_BYTES );
+    let name_label = Label::new( String::from( "devs2" ));
     let mut planner = WriteNewGraphPlanner::new( path_str.to_string(), name_label.as_ref().unwrap() );
     planner.plan();
 
@@ -306,10 +306,10 @@ mod tests
     let t = process_query( &query_string, build_id(), db_nickname() );
     let mut write_executor = WriteNewGraphExecutor::new( &t, path_str, 4096 );
     
-    write_executor.graph_name = Some( Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() );
+    write_executor.graph_name = Some( Label::new( String::from( "devs" )).unwrap() );
     write_executor.graph_uuid = Some( UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0cX" )).unwrap() );
 
-    let name_label = Label::new( String::from( "devs2" ), LABEL_BYTES );
+    let name_label = Label::new( String::from( "devs2" ));
     let mut planner = WriteNewGraphPlanner::new( path_str.to_string(), name_label.as_ref().unwrap() );
     planner.plan();
 
@@ -338,7 +338,7 @@ mod tests
     let t = process_query( &query_string, build_id(), db_nickname() );
     let mut write_executor = WriteNewGraphExecutor::new( &t, path_str, 4096 );
     
-    write_executor.graph_name = Some( Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() );
+    write_executor.graph_name = Some( Label::new( String::from( "devs" )).unwrap() );
     write_executor.graph_uuid = Some( UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0cX" )).unwrap() );
 
     let stmt = NodeStatement::new( 
@@ -368,7 +368,7 @@ mod tests
     let t = process_query( &query_string, build_id(), db_nickname() );
     let mut write_executor = WriteNewGraphExecutor::new( &t, path_str, 4096 );
     
-    write_executor.graph_name = Some( Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() );
+    write_executor.graph_name = Some( Label::new( String::from( "devs" )).unwrap() );
     write_executor.graph_uuid = Some( UUID::new( String::from( cons_uuid() )).unwrap() );
 
     let stmt = EdgeStatement::new( String::from( cons_uuid() ), 0, None, String::from( "primary" ));
@@ -454,7 +454,7 @@ mod tests
     assert_eq!( writer.err_state, None );
     assert_eq!( metadata( &PathBuf::from( path_str ) ).unwrap().len(), 4096 as u64 );
 
-    let name_label = Label::new( String::from( "devs2" ), LABEL_BYTES );
+    let name_label = Label::new( String::from( "devs2" ));
     let mut planner = WriteNewGraphPlanner::new( path_str.to_string(), name_label.as_ref().unwrap() );
     planner.plan();
 

@@ -1,6 +1,6 @@
 use std::fs::{ File };
 use std::path::PathBuf;
-use crate::datagramv2::grams::{ Label };
+use crate::datagramv2::internal_grams::{ Label };
 use crate::datagramv2::rows::{ affix_to_type, AffixType, PageType };
 use crate::utils::open_file;
 use crate::executor::core::CoreExecutor;
@@ -367,7 +367,6 @@ mod tests
 {
   use super::*;
   use std::fs::metadata;
-  use crate::common::LABEL_BYTES;
 
   const PAGE_SIZE: usize = 4096;
 
@@ -375,7 +374,7 @@ mod tests
   fn test_planner_1 () 
   {
     let path_str = "../test_data/new.sdb";
-    let name_label = Label::new( String::from( "devs" ), LABEL_BYTES );
+    let name_label = Label::new( String::from( "devs" ) );
     let mut planner = WriteNewGraphPlanner::new( path_str.to_string(), name_label.as_ref().unwrap() );
     planner.plan();
 
@@ -393,7 +392,7 @@ mod tests
   fn test_planner_2 () 
   {
     let path_str = "../test_data/new_with_data_page.sdb";
-    let name_label = Label::new( String::from( "devs" ), LABEL_BYTES );
+    let name_label = Label::new( String::from( "devs" ) );
     let mut planner = WriteNewGraphPlanner::new( path_str.to_string(), name_label.as_ref().unwrap() );
     planner.plan();
 

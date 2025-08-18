@@ -1,5 +1,5 @@
 use std::fmt::{ Display, Formatter, Result };
-use crate::datagramv2::grams::{ Label, UUID };
+use crate::datagramv2::internal_grams::{ Label, UUID };
 use crate::utils::{ parse_padded_str };
 use crate::cmd::{ CreateStatement, EdgeStatement, FromClause, NodeRefStatement, NodeStatement, ReadClause, ReturnClause };
 

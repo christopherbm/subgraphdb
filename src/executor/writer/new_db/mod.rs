@@ -1,5 +1,5 @@
 use std::io::{ Write };
-use crate::datagramv2::{ grams::{ Label, UUID }};
+use crate::datagramv2::internal_grams::{ Label, UUID };
 use crate::executor::writer::core::CoreWriteExecutor;
 
 pub struct WriteNewDBExecutor {}

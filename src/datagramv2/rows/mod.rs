@@ -3,7 +3,7 @@ use std::fs::{ File };
 use crate::utils::{ str_from_bytes };
 use crate::common::{ END_DB, LABEL_BYTES, PLACEHOLDER, ROW_AFFIX_BYTES, UUID_BYTES };
 use crate::datagramv2::dg_utils::next_u64;
-use crate::datagramv2::grams::{ DGu64, Label, UUID };
+use crate::datagramv2::internal_grams::{ DGu64, Label, UUID };
 
 // !! ALL VALUES MUST BE PADDED !!
 /*
@@ -201,12 +201,6 @@ impl EdgeRow
     if affix == EdgeRow::AFFIX { return true; }
     false
   }
-}
-
-pub struct PropRow {}
-impl PropRow 
-{
-  //const AFFIX: &'static str = "[::::PR]";
 }
 
 #[derive( Debug, Clone, PartialEq )]

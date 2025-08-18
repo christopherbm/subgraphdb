@@ -1,7 +1,7 @@
 use std::fs::{ File };
 use std::io::{ BufWriter, Seek, SeekFrom, Write };
 use crate::common::{ END_DB, LABEL_BYTES, PLACEHOLDER };
-use crate::datagramv2::grams::{ DGu64, Label, UUID };
+use crate::datagramv2::internal_grams::{ DGu64, Label, UUID };
 use crate::datagramv2::rows::{ BuildIDRow, DBNicknameRow, EdgeRow, GraphRow, NodeRow, PageRow };
 use crate::executor::core_planner::{ EmptySpace, WriteNewGraphPlanner };
 
@@ -41,7 +41,7 @@ impl CoreWriteExecutor
     let _ = stream.write( &DBNicknameRow::new( db_nickname )).unwrap();
 
     let default_graph_uuid = UUID::new( String::from( "1b622a2c-68dc-4848-a018-e71b604b5597" ));
-    let default_graph_name = Label::new( String::from( "DEFAULT_GRAPH" ), LABEL_BYTES );
+    let default_graph_name = Label::new( String::from( "DEFAULT_GRAPH" ) );
     let _ = stream.write( &GraphRow::new( &default_graph_uuid.unwrap(), &default_graph_name.unwrap() )).unwrap();
     
     let _ = stream.write( &PageRow::gen_empty_cells( page_size - byte_size )).unwrap();
@@ -171,7 +171,7 @@ mod tests
   const PAGE_SIZE: usize = 4096;
 
   fn build_id () -> UUID { UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c8" )).unwrap() }
-  fn db_nickname () -> Label { Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap() }
+  fn db_nickname () -> Label { Label::new( String::from( "devs" ) ).unwrap() }
 
   fn write_new_db ( path: &str )
   {
@@ -201,7 +201,7 @@ mod tests
     planner.plan();
 
     let new_uuid = UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c2" )).unwrap();
-    let new_name = Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap();
+    let new_name = Label::new( String::from( "devs" ) ).unwrap();
     let open_res = open_file( &PathBuf::from( path_str ));
     let mut writer = BufWriter::new( open_res.unwrap() );
     let _ = CoreWriteExecutor::write_graph( &new_uuid, &new_name, &planner, &mut writer );
@@ -222,7 +222,7 @@ mod tests
     planner.plan();
 
     let new_uuid = UUID::new( String::from( "67e55044-10b1-426f-9247-bb680e5fe0c2" )).unwrap();
-    let new_name = Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap();
+    let new_name = Label::new( String::from( "devs" ) ).unwrap();
     let open_res = open_file( &PathBuf::from( path_str ));
     let mut writer = BufWriter::new( open_res.unwrap() );
     let wdp_res = CoreWriteExecutor::write_data_page( &new_uuid, &new_name, PAGE_SIZE, &planner, &mut writer );
@@ -248,7 +248,7 @@ mod tests
     planner.plan();
 
     let new_uuid = UUID::new( String::from( cons_uuid() )).unwrap();
-    let new_name = Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap();
+    let new_name = Label::new( String::from( "devs" ) ).unwrap();
     let open_res = open_file( &PathBuf::from( path_str ));
     let mut writer = BufWriter::new( open_res.unwrap() );
     let wdp_res = CoreWriteExecutor::write_data_page( &new_uuid, &new_name, PAGE_SIZE, &planner, &mut writer );
@@ -261,7 +261,7 @@ mod tests
     
     let graph_order = DGu64::new( 0 );
     let node_id = UUID::new( String::from( cons_uuid() )).unwrap();
-    let primary_label = Label::new( String::from( "node" ), LABEL_BYTES ).unwrap();
+    let primary_label = Label::new( String::from( "node" ) ).unwrap();
     CoreWriteExecutor::write_node( &graph_order, &node_id, &primary_label, &mut writer );
     let _ = writer.write( &PageRow::new_start_empty_affix() ).unwrap();
 
@@ -282,7 +282,7 @@ mod tests
     planner.plan();
 
     let new_uuid = UUID::new( String::from( cons_uuid() )).unwrap();
-    let new_name = Label::new( String::from( "devs" ), LABEL_BYTES ).unwrap();
+    let new_name = Label::new( String::from( "devs" ) ).unwrap();
     let open_res = open_file( &PathBuf::from( path_str ));
     let mut writer = BufWriter::new( open_res.unwrap() );
     let wdp_res = CoreWriteExecutor::write_data_page( &new_uuid, &new_name, PAGE_SIZE, &planner, &mut writer );
@@ -295,7 +295,7 @@ mod tests
     
     let graph_order = DGu64::new( 0 );
     let edge_id = UUID::new( String::from( cons_uuid() )).unwrap();
-    let primary_label = Label::new( String::from( "edge" ), LABEL_BYTES ).unwrap();
+    let primary_label = Label::new( String::from( "edge" ) ).unwrap();
     let edge_dir = direction_to_str( &DirectionType::Undirected );
     let left_id = UUID::new( String::from( cons_uuid() )).unwrap();
     let right_id = UUID::new( String::from( cons_uuid() )).unwrap();

@@ -1,17 +1,25 @@
 pub mod kvps;
+pub mod validators;
 
 /* @version 0.3.0 */
-
-
-/*
-Floating point: f32, f64
-*/
 
 pub static BOOL_BYTES: usize = 8 as usize;
 pub static UUID_BYTES: usize = 40 as usize;
 pub static RAW_UUID_BYTES: usize = 36 as usize;
 pub static LABEL_BYTES: usize = 64 as usize; // names, labels, etc
+
+
+pub static I8_BYTES: usize = 1 as usize;
+pub static U8_BYTES: usize = 1 as usize;
+pub static I16_BYTES: usize = 2 as usize;
+pub static U16_BYTES: usize = 2 as usize;
+pub static I32_BYTES: usize = 4 as usize;
+pub static U32_BYTES: usize = 4 as usize;
 pub static U64_BYTES: usize = 8 as usize;
+pub static I64_BYTES: usize = 8 as usize;
+pub static U128_BYTES: usize = 16 as usize;
+pub static I128_BYTES: usize = 16 as usize;
+
 pub static SHORT_STRING_BYTES: usize = 8 as usize;
 pub static ROW_AFFIX_BYTES: usize = 8 as usize;
 

@@ -1,7 +1,11 @@
 use std::io::{ Seek, SeekFrom, Read, Error };
 use std::fs::{ File };
-use crate::utils::{ str_from_bytes };
-use crate::common::{ END_DB, LABEL_BYTES, PLACEHOLDER, ROW_AFFIX_BYTES, UUID_BYTES };
+use crate::datagramv2::external_grams::traits::KVP;
+use crate::datagramv2::external_grams::basic::{ KVPBooleanGram, KVPStringGram };
+use crate::datagramv2::external_grams::signed::{ KVPi128Gram, KVPi16Gram, KVPi32Gram, KVPi64Gram, KVPi8Gram };
+use crate::datagramv2::external_grams::unsigned::{ KVPu128Gram, KVPu16Gram, KVPu32Gram, KVPu64Gram, KVPu8Gram };
+use crate::utils::{ parse_padded_str, str_from_bytes };
+use crate::common::{ END_DB, KVSTR_BYTES, LABEL_BYTES, PLACEHOLDER, ROW_AFFIX_BYTES, UUID_BYTES };
 use crate::datagramv2::dg_utils::next_u64;
 use crate::datagramv2::internal_grams::{ DGu64, Label, UUID };
 
@@ -301,6 +305,271 @@ impl PageRow
   pub fn data_page_size () -> usize { (ROW_AFFIX_BYTES * 3) + GraphRow::size() }
 }
 
+
+pub struct KVPRow {}
+impl KVPRow 
+{
+  const KVSTR_AFFIX: &'static str = "[:KVSTR]";
+  const KVBOOL_AFFIX: &'static str = "[KVBOOL]";
+  const KVI8_AFFIX: &'static str = "[::KVI8]";
+  const KVU8_AFFIX: &'static str = "[::KVU8]";
+  const KVI16_AFFIX: &'static str = "[:KVI16]";
+  const KVU16_AFFIX: &'static str = "[:KVU16]";
+  const KVI32_AFFIX: &'static str = "[:KVI32]";
+  const KVU32_AFFIX: &'static str = "[:KVU32]";
+  const KVI64_AFFIX: &'static str = "[:KVI64]";
+  const KVU64_AFFIX: &'static str = "[:KVU64]";
+  const KVI128_AFFIX: &'static str = "[KVI128]";
+  const KVU128_AFFIX: &'static str = "[KVU128]";
+  const KVF32_AFFIX: &'static str = "[:KVF32]";
+  const KVF64_AFFIX: &'static str = "[:KVF64]";
+
+  pub fn new_kvstr ( kv: &KVPStringGram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVSTR_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVSTR_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvbool ( kv: &KVPBooleanGram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVBOOL_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVBOOL_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvi8 ( kv: &KVPi8Gram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVI8_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVI8_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvu8 ( kv: &KVPu8Gram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVU8_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVU8_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvi16 ( kv: &KVPi16Gram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVI16_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVI16_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvu16 ( kv: &KVPu16Gram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVU16_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVU16_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvi32 ( kv: &KVPi32Gram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVI32_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVI32_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvu32 ( kv: &KVPu32Gram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVU32_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVU32_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvi64 ( kv: &KVPi64Gram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVI64_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVI64_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvu64 ( kv: &KVPu64Gram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVU64_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVU64_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvi128 ( kv: &KVPi128Gram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVI128_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVI128_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvu128 ( kv: &KVPu128Gram ) -> Vec<u8> 
+  {
+    let mut ret = Vec::new();
+    ret.append( &mut String::from( KVPRow::KVU128_AFFIX ).into_bytes() );
+    ret.append( &mut kv.unwrap() );
+    ret.append( &mut String::from( KVPRow::KVU128_AFFIX ).into_bytes() );
+    ret
+  }
+
+  pub fn new_kvstr_affix () -> Vec<u8> { String::from( KVPRow::KVSTR_AFFIX ).into_bytes() }
+  pub fn new_kvbool_affix () -> Vec<u8> { String::from( KVPRow::KVBOOL_AFFIX ).into_bytes() }
+  pub fn new_kvi8_affix () -> Vec<u8> { String::from( KVPRow::KVI8_AFFIX ).into_bytes() }
+  pub fn new_kvu8_affix () -> Vec<u8> { String::from( KVPRow::KVU8_AFFIX ).into_bytes() }
+  pub fn new_kvi16_affix () -> Vec<u8> { String::from( KVPRow::KVI16_AFFIX ).into_bytes() }
+  pub fn new_kvu16_affix () -> Vec<u8> { String::from( KVPRow::KVU16_AFFIX ).into_bytes() }
+  pub fn new_kvi32_affix () -> Vec<u8> { String::from( KVPRow::KVI32_AFFIX ).into_bytes() }
+  pub fn new_kvu32_affix () -> Vec<u8> { String::from( KVPRow::KVU32_AFFIX ).into_bytes() }
+  pub fn new_kvi64_affix () -> Vec<u8> { String::from( KVPRow::KVI64_AFFIX ).into_bytes() }
+  pub fn new_kvu64_affix () -> Vec<u8> { String::from( KVPRow::KVU64_AFFIX ).into_bytes() }
+  pub fn new_kvi128_affix () -> Vec<u8> { String::from( KVPRow::KVI128_AFFIX ).into_bytes() }
+  pub fn new_kvu128_affix () -> Vec<u8> { String::from( KVPRow::KVU128_AFFIX ).into_bytes() }
+  pub fn new_kvf32_affix () -> Vec<u8> { String::from( KVPRow::KVF32_AFFIX ).into_bytes() }
+  pub fn new_kvf64_affix () -> Vec<u8> { String::from( KVPRow::KVF64_AFFIX ).into_bytes() }
+
+  pub fn is_kvstr_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVSTR_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvbool_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVBOOL_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvi8_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVI8_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvu8_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVU8_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvi16_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVI16_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvu16_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVU16_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvi32_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVI32_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvu32_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVU32_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvi64_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVI64_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvu64_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVU64_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvi128_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVI128_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvu128_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVU128_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvf32_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVF32_AFFIX { return true; }
+    false
+  }
+
+  pub fn is_kvf64_affix ( affix: &str ) -> bool 
+  {
+    if affix == KVPRow::KVF64_AFFIX { return true; }
+    false
+  }
+
+  /*
+    pub fn new_kvstr_affix () -> Vec<u8> { String::from( KVPRow::KVSTR_AFFIX ).into_bytes() }
+    pub fn new_kvbool_affix () -> Vec<u8> { String::from( KVPRow::KVBOOL_AFFIX ).into_bytes() }
+    pub fn new_kvi8_affix () -> Vec<u8> { String::from( KVPRow::KVI8_AFFIX ).into_bytes() }
+    pub fn new_kvu8_affix () -> Vec<u8> { String::from( KVPRow::KVU8_AFFIX ).into_bytes() }
+    pub fn new_kvi16_affix () -> Vec<u8> { String::from( KVPRow::KVI16_AFFIX ).into_bytes() }
+    pub fn new_kvu16_affix () -> Vec<u8> { String::from( KVPRow::KVU16_AFFIX ).into_bytes() }
+    pub fn new_kvi32_affix () -> Vec<u8> { String::from( KVPRow::KVI32_AFFIX ).into_bytes() }
+    pub fn new_kvu32_affix () -> Vec<u8> { String::from( KVPRow::KVU32_AFFIX ).into_bytes() }
+    pub fn new_kvi64_affix () -> Vec<u8> { String::from( KVPRow::KVI64_AFFIX ).into_bytes() }
+    pub fn new_kvu64_affix () -> Vec<u8> { String::from( KVPRow::KVU64_AFFIX ).into_bytes() }
+    pub fn new_kvi128_affix () -> Vec<u8> { String::from( KVPRow::KVI128_AFFIX ).into_bytes() }
+    pub fn new_kvu128_affix () -> Vec<u8> { String::from( KVPRow::KVU128_AFFIX ).into_bytes() }
+    pub fn new_kvf32_affix () -> Vec<u8> { String::from( KVPRow::KVF32_AFFIX ).into_bytes() }
+    pub fn new_kvf64_affix () -> Vec<u8> { String::from( KVPRow::KVF64_AFFIX ).into_bytes() }
+  */
+
+  // Assumes first affix has been read
+  pub fn read_kvstr ( f: &mut File ) -> Result<KVPStringGram, String> 
+  {
+    let mut buffer = [ 0; KVSTR_BYTES ];
+    let _ = f.read_exact( &mut buffer );
+    
+    let key_res = str_from_bytes( &buffer[0..LABEL_BYTES].to_vec() );
+    if key_res.is_err() { return Err( String::from( "Read Error: Key" )); }
+
+    let val_res = str_from_bytes( &buffer[LABEL_BYTES + 1 ..].to_vec() );
+    if val_res.is_err() { return Err( String::from( "Read Error: Value" )); }
+
+    let _ = f.seek( SeekFrom::Current(( ROW_AFFIX_BYTES ) as i64 ));
+    
+    KVPStringGram::new( 
+      parse_padded_str( &key_res.unwrap() ).to_string(), 
+      parse_padded_str( &val_res.unwrap() ).to_string() )
+  }
+}
+
+
+
 #[derive( Debug, Clone, PartialEq )]
 pub enum AffixType 
 { 
@@ -347,7 +616,95 @@ pub fn is_default_graph ( name: &str ) -> bool
 mod tests 
 {
   use super::*;
-  //use utils::{ pad_str };
+  use crate::utils::{ gen_pad_str, pad_str };
+
+  #[test]
+  fn test_testing () 
+  {
+    let key = pad_str( LABEL_BYTES, String::from( "key" ));
+    let val = pad_str( LABEL_BYTES, String::from( "val" ));
+    
+    println!( "{:?}", key + &val );
+
+    let key_padding = gen_pad_str( LABEL_BYTES - &String::from( "key" ).len() );
+    let val_padding = gen_pad_str( LABEL_BYTES - &String::from( "val" ).len() );
+
+    let bytes = ( String::from( "key" ) + &key_padding + &String::from( "val" ) + &val_padding ).into_bytes();
+    println!( "{:?}", bytes );
+  }
+
+  #[test]
+  fn test_kvprow_affix_len () 
+  {
+    assert_eq!( KVPRow::KVSTR_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVBOOL_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVI8_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVU8_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVI16_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVU16_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVI32_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVU32_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVI64_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVU64_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVI128_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVU128_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVF32_AFFIX.len(), 8 );
+    assert_eq!( KVPRow::KVF64_AFFIX.len(), 8 );
+  }
+
+  #[test]
+  fn test_kvprow_new_affix () 
+  {
+    assert_eq!( KVPRow::new_kvstr_affix(), String::from( KVPRow::KVSTR_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvbool_affix(), String::from( KVPRow::KVBOOL_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvbool_affix(), String::from( KVPRow::KVBOOL_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvi8_affix(), String::from( KVPRow::KVI8_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvu8_affix(), String::from( KVPRow::KVU8_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvi16_affix(), String::from( KVPRow::KVI16_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvu16_affix(), String::from( KVPRow::KVU16_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvi32_affix(), String::from( KVPRow::KVI32_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvu32_affix(), String::from( KVPRow::KVU32_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvi64_affix(), String::from( KVPRow::KVI64_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvu64_affix(), String::from( KVPRow::KVU64_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvi128_affix(), String::from( KVPRow::KVI128_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvu128_affix(), String::from( KVPRow::KVU128_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvf32_affix(), String::from( KVPRow::KVF32_AFFIX ).into_bytes() );
+    assert_eq!( KVPRow::new_kvf64_affix(), String::from( KVPRow::KVF64_AFFIX ).into_bytes() );
+  }
+
+  #[test]
+  fn test_kvprow_is_affix () 
+  {
+    assert_eq!( KVPRow::is_kvstr_affix( KVPRow::KVSTR_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvbool_affix( KVPRow::KVBOOL_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvi8_affix( KVPRow::KVI8_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvu8_affix( KVPRow::KVU8_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvi16_affix( KVPRow::KVI16_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvu16_affix( KVPRow::KVU16_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvi32_affix( KVPRow::KVI32_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvu32_affix( KVPRow::KVU32_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvi64_affix( KVPRow::KVI64_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvu64_affix( KVPRow::KVU64_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvi128_affix( KVPRow::KVI128_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvu128_affix( KVPRow::KVU128_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvf32_affix( KVPRow::KVF32_AFFIX ), true );
+    assert_eq!( KVPRow::is_kvf64_affix( KVPRow::KVF64_AFFIX ), true );
+
+    assert_eq!( KVPRow::is_kvstr_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvbool_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvi8_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvu8_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvi16_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvu16_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvi32_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvu32_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvi64_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvu64_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvi128_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvu128_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvf32_affix( "" ), false );
+    assert_eq!( KVPRow::is_kvf64_affix( "" ), false );
+  } 
 
   #[test]
   fn test_cons_graph_row () 

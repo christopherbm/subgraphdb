@@ -8,7 +8,6 @@ pub static UUID_BYTES: usize = 40 as usize;
 pub static RAW_UUID_BYTES: usize = 36 as usize;
 pub static LABEL_BYTES: usize = 64 as usize; // names, labels, etc
 
-
 pub static I8_BYTES: usize = 1 as usize;
 pub static U8_BYTES: usize = 1 as usize;
 pub static I16_BYTES: usize = 2 as usize;
@@ -19,6 +18,23 @@ pub static U64_BYTES: usize = 8 as usize;
 pub static I64_BYTES: usize = 8 as usize;
 pub static U128_BYTES: usize = 16 as usize;
 pub static I128_BYTES: usize = 16 as usize;
+pub static F32_BYTES: usize = 4 as usize;
+pub static F64_BYTES: usize = 8 as usize;
+
+pub static KVSTR_BYTES: usize = LABEL_BYTES * 2;
+pub static KVBOOL_BYTES: usize = LABEL_BYTES + BOOL_BYTES;
+pub static KVI8_BYTES: usize = LABEL_BYTES + I8_BYTES;
+pub static KVU8_BYTES: usize = LABEL_BYTES + U8_BYTES;
+pub static KVI16_BYTES: usize = LABEL_BYTES + I16_BYTES;
+pub static KVU16_BYTES: usize = LABEL_BYTES + U16_BYTES;
+pub static KVI32_BYTES: usize = LABEL_BYTES + I32_BYTES;
+pub static KVU32_BYTES: usize = LABEL_BYTES + U32_BYTES;
+pub static KVI64_BYTES: usize = LABEL_BYTES + I64_BYTES;
+pub static KVU64_BYTES: usize = LABEL_BYTES + U64_BYTES;
+pub static KVI128_BYTES: usize = LABEL_BYTES + I128_BYTES;
+pub static KVU128_BYTES: usize = LABEL_BYTES + U128_BYTES;
+pub static KVF32_BYTES: usize = LABEL_BYTES + F32_BYTES;
+pub static KVF64_BYTES: usize = LABEL_BYTES + F64_BYTES;
 
 pub static SHORT_STRING_BYTES: usize = 8 as usize;
 pub static ROW_AFFIX_BYTES: usize = 8 as usize;
